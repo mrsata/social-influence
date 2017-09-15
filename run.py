@@ -1,0 +1,6 @@
+
+'''
+May need:
+    viewHistory
+    upvoteHistory
+'''
