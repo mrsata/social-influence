@@ -14,6 +14,9 @@ class User(object):
 
     def __init__(self, uid):
         self.uid = uid
+        
+    def getID(self):
+        return self.uid
 
     def view():
         pass
