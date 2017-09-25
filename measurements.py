@@ -8,11 +8,11 @@ Created on Mon Sep 25 16:47:33 2017
 
 from item import Item
 import numpy as np
-from scipy.stats import rankdata
-from scipy.stats import kendalltau
+import scipy.stats as stats
 
 # Spearman's Rho
 
+# Kendall tau distance
 # Performance measured using Kendall tau distance (bubble sort distance) between final list ranking and expected (quality) ranking
 # Values close to 1 indicate strong agreement, values close to -1 indicate strong disagreement. 
 def kendallTauDist(itms,final_ranking = None,rank_std="random"):
@@ -23,12 +23,12 @@ def kendallTauDist(itms,final_ranking = None,rank_std="random"):
         # Reorder the final list in descending quality order
         itms_final = sorted(itms_final, key=lambda x: x.getQuality(), reverse=True)    
         # Ranking in descending upvotes order
-        final_rank = rankdata([-itm.getVotes() for itm in itms_final],method='min')
+        final_rank = stats.rankdata([-itm.getVotes() for itm in itms_final],method='min')
     elif rank_std=="quality":  
         # Ranking in displaced order
         final_rank = final_ranking
     # Ranking in descending quality order
-    desq_rank = rankdata([-itm.getQuality() for itm in itms_final],method='min')
+    desq_rank = stats.rankdata([-itm.getQuality() for itm in itms_final],method='min')
     # Calculate the Kendall tau distance 
-    tau, p_value = kendalltau(desq_rank, final_rank)
+    tau, p_value = stats.kendalltau(desq_rank, final_rank)
     return {'final_rank':final_rank, 'exp_rank':desq_rank ,'dist':tau}
