@@ -8,13 +8,18 @@ class Platform(object):
     A platform is an environment where users interacts with items.
 
     Property:
-        items
-        users
-        viewHistory
-        evalHistory
+        dict items
+        dict users
+        int num_item
+        int num_user
+        np.ndarray viewHistory
+        np.ndarray evalHistory
+        list itemRanking
+        list itemPlacement
     Function:
-        place
-        view
+        rankItems()
+        placeItems()
+        run()
 
     """
 

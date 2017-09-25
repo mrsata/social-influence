@@ -10,8 +10,9 @@ class User(object):
         uid
         ability
     Function:
-        view
-        eval
+        view()
+        evaluate()
+        create()
 
     """
 

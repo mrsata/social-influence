@@ -8,6 +8,8 @@ class Item(object):
         quality
         views
         votes
+    Function:
+        setVotes()
 
     """
 
@@ -36,4 +38,4 @@ class Item(object):
         elif evaluation > 0:
             self.votes += 1
         else:
-            self.votes += 1
+            self.votes -= 1
