@@ -6,8 +6,8 @@ import xlwt
 
 from item import Item
 from user import User
-from platform import Platform
-from functions import *
+from plat import Platform
+from measurements import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--rankMode', type=str, default='quality')
@@ -16,8 +16,8 @@ parser.add_argument('--viewMode', type=str, default='all')
 args = parser.parse_args()
 
 random.seed(123)
-num_item = 20
-num_user = 30
+num_item = 10
+num_user = 100
 items = {}
 users = {}
 quality_range = range(1, 6)  # quality of 1~5
@@ -40,9 +40,17 @@ platform.rankItems(mode=args.rankMode)
 platform.placeItems(mode=args.placeMode)
 viewHistory, evalHistory = platform.run(mode=args.viewMode)
 
-plt.imshow(evalHistory, cmap=plt.cm.Blues, interpolation='nearest')
-plt.title('evalHistory')
-plt.xlabel('user')
-plt.ylabel('item')
-plt.colorbar()
-plt.show()
+#plt.imshow(evalHistory, cmap=plt.cm.Blues, interpolation='nearest')
+#plt.title('evalHistory')
+#plt.xlabel('user')
+#plt.ylabel('item')
+#plt.colorbar()
+#plt.show()
+
+final_list = [itm for itm in platform.items.values()]
+final_ranking = [i+1 for i in platform.itemPlacement]
+#print (final_list[0].getQuality())
+perfmeas = kendallTauDist(final_list,final_ranking,rank_std="random")
+print ("Final ranking: ",perfmeas['final_rank'])
+print ("Expected ranking: ",perfmeas['exp_rank'])
+print ("Kendall tau distance:",perfmeas['dist'])
