@@ -1,4 +1,3 @@
-
 class Item(object):
     """Abstract base class for items
 
@@ -7,48 +6,34 @@ class Item(object):
     Property:
         iid
         quality
-    To add:
-        placement
+        views
+        votes
 
     """
 
     def __init__(self, iid, quality):
         self.iid = iid
         self.quality = quality
-        self.place = []
-        self.viewHistory = list()
-        self.viewUid = list()
-        
-                
+        self.views = 0
+        self.votes = 0
+
     def getID(self):
         return self.iid
 
     def getQuality(self):
         return self.quality
-    
-    def getPlace(self):
-        return self.place
-    
-    def setPlace(self,place):
-        self.place = place
-        return
-        
-    def viewed(self,uid,eval_value):
-        self.viewUid.append(uid)
-        self.viewHistory.append(eval_value)
-        return
-        
-    def getNumViews(self):
-        return len(self.viewHistory)
-    
-    def getUpvotes(self):
-        if self.viewHistory:
-            return self.viewHistory.count(1)
+
+    def getViews(self):
+        return self.views
+
+    def getVotes(self):
+        return self.votes
+
+    def setVotes(self, evaluation):
+        if evaluation == 0:
+            raise Exception("Setting vote for unevaluated item with id: " +
+                            str(self.iid))
+        elif evaluation > 0:
+            self.votes += 1
         else:
-            return 0
-    
-    def getDownvotes(self):
-        if self.viewHistory:
-            return self.viewHistory.count(2)
-        else:
-            return 0
+            self.votes += 1
