@@ -26,7 +26,7 @@ class User(object):
         # TODO: change the user's intent to evaluate & create
         item_place = item.getPlace()
         # The higher the place, the more likely the user chooses to view it.
-        prob = 0.98**(item_place+1) # 0.98^place
+        prob = 0.97**(item_place+1) # 0.97^place
         evalutation = self.evaluate(item,evalMethod) if random.random() < prob else 0
         return evalutation
 
@@ -51,7 +51,7 @@ class User(object):
         elif method=="rel_quality":
             evaluation = item_q + np.random.normal(0, 0.1)
         else: # "upvote_only":
-            evaluation = 1 if (item_q + np.random.normal(0, 0.1))>0.7 else 0
+            evaluation = 1 if (0.9*item_q + np.random.normal(0, 0.2))>0.7 else 0
         return evaluation
 
     def create(self):

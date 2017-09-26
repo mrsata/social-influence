@@ -38,7 +38,7 @@ def simulation(num_simulation,num_item,num_user,mode,evalMethod):
     # Simulations start
     for sim in range(0,num_simulation):
 #        print ("Simulation %d" % (sim)) 
-        random.seed(i)
+#        random.seed(i)
         items = {}
         # Initialization of items
         for i in range(num_item):
@@ -54,26 +54,26 @@ def simulation(num_simulation,num_item,num_user,mode,evalMethod):
         platform.placeItems(mode='all')
         # Currently available mode: 'random', 'quality', 'views', 'upvotes', 'ucb'
         # Currently available evalMethod: 'abs_quality', 'rel_quality', 'upvote_only'
-        viewHistory, evalHistory = platform.run(mode,evalMethod)
+        viewHistory, evalHistory = platform.run(mode=mode,evalMethod=evalMethod,run_mode='all')
         
         # Measure the performance
         final_list = [itm for itm in platform.items.values()] # list of items
         perfmeas = kendallTauDist(final_list)
         dist.append(perfmeas['dist'])
-        return dist
+    return dist
 
 
 # Run Simulation
 num_item = 20
 num_user = 50
-num_simulation = 1000
+num_simulation = 10000
 
 evalMethod='upvote_only'
 
-for mode in ['random', 'quality', 'views', 'upvotes', 'ucb']:
+for mode in ['random', 'quality']: # 'views', 'upvotes', 'ucb'
     dist = simulation(num_simulation,num_item,num_user,mode,evalMethod)
     print ("num_item: {}\nnum_user: {}\nnum_simulation: {}".format(num_item, num_user, num_simulation))
     print ("ranking mode: {}\nevaluation method: {}".format(mode, evalMethod))
-    print (("Perforamnce (Kendall tau distance):",np.mean(dist)))
+    print ('Performance (Kendall tau distance):',np.mean(dist))
     print ("")
         

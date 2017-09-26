@@ -65,7 +65,7 @@ platform.rankItems(mode=args.rankMode)
 platform.placeItems(mode=args.placeMode)
 # Currently available mode: 'random', 'quality', 'views', 'upvotes', 'ucb'
 # Currently available evalMethod: 'abs_quality', 'rel_quality', 'upvote_only'
-viewHistory, evalHistory = platform.run(mode='quality',evalMethod="upvote_only")
+viewHistory, evalHistory = platform.run(mode='quality',evalMethod="upvote_only",run_mode='all')
 accum_evals = np.cumsum(evalHistory,axis=1) # accumulation of evaluations
 
 

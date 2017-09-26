@@ -20,7 +20,7 @@ import scipy.stats as stats
 def kendallTauDist(itms,final_ranking = None,rank_std="upvotes"):
     itms_final = np.copy(itms) # not to modify the original list accidentally
     if rank_std=="upvotes":
-        print ("(For performance measurement, final ranking list by #Votes.)")
+#        print ("(For performance measurement, final ranking by #Votes.)")
 #        # Reorder the final list in descending quality order
 #        itms_final = sorted(itms_final, key=lambda x: x.getQuality(), reverse=True)    
         # Ranking in descending upvotes order

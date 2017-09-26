@@ -37,7 +37,7 @@ class Platform(object):
     def rankItems(self, mode='quality'):
         # Rank items with given mode of ranking policies from
         # ['random', 'quality', 'views', 'upvotes', 'ucb']
-        print('rankMode: ' + mode)
+#        print('rankMode: ' + mode)
         if mode == 'random':
             ranking = list(self.items.keys())
             random.shuffle(ranking)
@@ -73,7 +73,7 @@ class Platform(object):
         return ranking
 
     def placeItems(self, mode='all'):
-        print('placeMode: ' + mode)
+#        print('placeMode: ' + mode)
         if mode == 'all':
             placement = self.itemRanking
         else:
@@ -81,11 +81,11 @@ class Platform(object):
         self.itemPlacement = placement
         return placement
 
-    def run(self, evalMethod='abs_quality', mode='all'):
+    def run(self, mode, evalMethod='abs_quality', run_mode='all'):
         # Run a simulation with given mode of viewing policies from
         # ['all', 'random', 'position', 'views', 'upvotes']
-        print('viewMode: ' + mode)
-        if mode == 'all':
+#        print('viewMode: ' + run_mode)
+        if run_mode == 'all':
             # Permutates users with items
             for uid in self.users.keys():
                 for iid in self.itemPlacement:
@@ -95,6 +95,8 @@ class Platform(object):
                     if evalutaion:
                         self.evalHistory[iid][uid] = evalutaion
                         self.items[iid].setVotes(evalutaion)
+                self.rankItems(mode=mode)
+                self.placeItems(mode='all')
         else:
             # Permutates users with items
             for uid in self.users.keys():
