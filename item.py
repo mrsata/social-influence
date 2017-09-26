@@ -18,6 +18,7 @@ class Item(object):
         self.quality = quality
         self.views = 0
         self.votes = 0
+        self.place = None
 
     def getID(self):
         return self.iid
@@ -30,6 +31,9 @@ class Item(object):
 
     def getVotes(self):
         return self.votes
+    
+    def getPlace(self):
+        return self.place
 
     def setVotes(self, evaluation):
         if evaluation == 0:
@@ -39,3 +43,6 @@ class Item(object):
             self.votes += 1
         else:
             self.votes -= 1
+    
+    def setPlace(self, p):
+        self.place = p

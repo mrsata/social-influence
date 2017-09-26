@@ -1,4 +1,5 @@
 import random
+import numpy as np
 
 
 class User(object):
@@ -20,13 +21,16 @@ class User(object):
         self.uid = uid
         self.ability = ability
 
-    def view(self, item):
+    def view(self, item, evalMethod):
         # Users evaluate an item as long as they view it
         # TODO: change the user's intent to evaluate & create
-        evalutation = self.evaluate(item) if random.random() > 0 else 0
+        item_place = item.getPlace()
+        # The higher the place, the more likely the user chooses to view it.
+        prob = 0.98**(item_place+1) # 0.98^place
+        evalutation = self.evaluate(item,evalMethod) if random.random() < prob else 0
         return evalutation
 
-    def evaluate(self, item):
+    def evaluate(self, item, method='abs_quality'):
         # Evaluate the item naively using the item's true quality
         # TODO: change the evaluation policy
         ''' Random Policy:
@@ -41,7 +45,14 @@ class User(object):
         else:
             # do nothing
         '''
-        return item.getQuality() - 2.5
+        item_q = item.getQuality()
+        if method=="abs_quality":
+            evaluation = item_q
+        elif method=="rel_quality":
+            evaluation = item_q + np.random.normal(0, 0.1)
+        else: # "upvote_only":
+            evaluation = 1 if (item_q + np.random.normal(0, 0.1))>0.7 else 0
+        return evaluation
 
     def create(self):
         pass
