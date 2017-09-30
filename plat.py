@@ -32,11 +32,12 @@ class Platform(object):
         self.evalHistory = np.zeros((self.num_item, self.num_user))
         self.itemRanking = None
         self.itemPlacement = None
+        self.placeOfItems = None
 
     def rankItems(self, mode='quality'):
         # Rank items with given mode of ranking policies from
         # ['random', 'quality', 'views', 'upvotes', 'ucb']
-        print('rankMode: ' + mode)
+#        print('rankMode: ' + mode)
         if mode == 'random':
             ranking = list(self.items.keys())
             random.shuffle(ranking)
@@ -59,17 +60,20 @@ class Platform(object):
             ranking = sorted(
                 self.items.keys(),
                 key=
-                lambda x: self.item[x].getQuality() /
-                np.sqrt(self.item[x].getViews()) + 1000,
+                lambda x: self.items[x].getQuality() /
+                np.sqrt(self.items[x].getViews()) + 1000,
                 reverse=True)
             # In case of zero division, sort by quality if item.getViews() == 0
         else:
             raise Exception("Unexpected rank mode")
         self.itemRanking = ranking
+        self.placeOfItems = [ranking.index(i) for i in self.items.keys()]
+        for i,key in enumerate(self.items.keys()):
+            self.items[key].setPlace(self.placeOfItems[i]) 
         return ranking
 
     def placeItems(self, mode='all'):
-        print('placeMode: ' + mode)
+#        print('placeMode: ' + mode)
         if mode == 'all':
             placement = self.itemRanking
         else:
@@ -77,29 +81,42 @@ class Platform(object):
         self.itemPlacement = placement
         return placement
 
-    def run(self, mode='all'):
+    def run(self, mode, evalMethod='abs_quality', run_mode='all'):
         # Run a simulation with given mode of viewing policies from
         # ['all', 'random', 'position', 'views', 'upvotes']
-        print('viewMode: ' + mode)
-        if mode == 'all':
+#        print('viewMode: ' + run_mode)
+        if run_mode == 'all':
             # Permutates users with items
             for uid in self.users.keys():
                 for iid in self.itemPlacement:
-                    evalutaion = self.users[uid].view(self.items[iid])
+                    evalutaion = self.users[uid].view(self.items[iid],evalMethod)
                     self.viewHistory[iid][uid] += 1
                     self.items[iid].views += 1
                     if evalutaion:
                         self.evalHistory[iid][uid] = evalutaion
                         self.items[iid].setVotes(evalutaion)
-        elif mode == 'random':
-            raise Exception("Viewing type " + mode + " not yet implemented")
-        elif mode == 'position':
-            raise Exception("Viewing type " + mode + " not yet implemented")
-        elif mode == 'views':
-            raise Exception("Viewing type " + mode + " not yet implemented")
-        elif mode == 'upvotes':
-            raise Exception("Viewing type " + mode + " not yet implemented")
+                self.rankItems(mode=mode)
+                self.placeItems(mode='all')
         else:
-            raise Exception("Unexpected view mode")
+            # Permutates users with items
+            for uid in self.users.keys():
+                for iid in self.itemPlacement:
+                    evalutaion = self.users[uid].view(self.items[iid],evalMethod)
+                    self.viewHistory[iid][uid] += 1
+                    self.items[iid].views += 1
+                    if evalutaion:
+                        self.evalHistory[iid][uid] = evalutaion
+                        self.items[iid].setVotes(evalutaion)
+        # TODO: finish all different modes
+#        elif mode == 'random':
+#            raise Exception("Viewing type " + mode + " not yet implemented")
+#        elif mode == 'position':
+#            raise Exception("Viewing type " + mode + " not yet implemented")
+#        elif mode == 'views':
+#            raise Exception("Viewing type " + mode + " not yet implemented")
+#        elif mode == 'upvotes':
+#            raise Exception("Viewing type " + mode + " not yet implemented")
+#        else:
+#            raise Exception("Unexpected view mode")
 
         return self.viewHistory, self.evalHistory
