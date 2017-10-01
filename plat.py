@@ -37,7 +37,7 @@ class Platform(object):
     def rankItems(self, mode='quality'):
         # Rank items with given mode of ranking policies from
         # ['random', 'quality', 'views', 'upvotes', 'ucb']
-#        print('rankMode: ' + mode)
+        #        print('rankMode: ' + mode)
         if mode == 'random':
             ranking = list(self.items.keys())
             random.shuffle(ranking)
@@ -54,26 +54,25 @@ class Platform(object):
         elif mode == 'upvotes':
             ranking = sorted(
                 self.items.keys(),
-                key=lambda x: self.items[x].getVotes(),
+                key=lambda x: self.items[x].getVotes()[0],
                 reverse=True)
         elif mode == 'ucb':
             ranking = sorted(
                 self.items.keys(),
                 key=
-                lambda x: self.items[x].getQuality() /
-                np.sqrt(self.items[x].getViews()) + 1000,
+                lambda x: wilsonScoreInterval(self.items[x].getVotes()[0], self.items[x].getVotes()[1])[0],
                 reverse=True)
             # In case of zero division, sort by quality if item.getViews() == 0
         else:
             raise Exception("Unexpected rank mode")
         self.itemRanking = ranking
         self.placeOfItems = [ranking.index(i) for i in self.items.keys()]
-        for i,key in enumerate(self.items.keys()):
-            self.items[key].setPlace(self.placeOfItems[i]) 
+        for i, key in enumerate(self.items.keys()):
+            self.items[key].setPlace(self.placeOfItems[i])
         return ranking
 
     def placeItems(self, mode='all'):
-#        print('placeMode: ' + mode)
+        #        print('placeMode: ' + mode)
         if mode == 'all':
             placement = self.itemRanking
         else:
@@ -84,12 +83,13 @@ class Platform(object):
     def run(self, mode, evalMethod='abs_quality', run_mode='all'):
         # Run a simulation with given mode of viewing policies from
         # ['all', 'random', 'position', 'views', 'upvotes']
-#        print('viewMode: ' + run_mode)
+        #        print('viewMode: ' + run_mode)
         if run_mode == 'all':
             # Permutates users with items
             for uid in self.users.keys():
                 for iid in self.itemPlacement:
-                    evalutaion = self.users[uid].view(self.items[iid],evalMethod)
+                    evalutaion = self.users[uid].view(self.items[iid],
+                                                      evalMethod)
                     self.viewHistory[iid][uid] += 1
                     self.items[iid].views += 1
                     if evalutaion:
@@ -101,22 +101,36 @@ class Platform(object):
             # Permutates users with items
             for uid in self.users.keys():
                 for iid in self.itemPlacement:
-                    evalutaion = self.users[uid].view(self.items[iid],evalMethod)
+                    evalutaion = self.users[uid].view(self.items[iid],
+                                                      evalMethod)
                     self.viewHistory[iid][uid] += 1
                     self.items[iid].views += 1
                     if evalutaion:
                         self.evalHistory[iid][uid] = evalutaion
                         self.items[iid].setVotes(evalutaion)
         # TODO: finish all different modes
-#        elif mode == 'random':
-#            raise Exception("Viewing type " + mode + " not yet implemented")
-#        elif mode == 'position':
-#            raise Exception("Viewing type " + mode + " not yet implemented")
-#        elif mode == 'views':
-#            raise Exception("Viewing type " + mode + " not yet implemented")
-#        elif mode == 'upvotes':
-#            raise Exception("Viewing type " + mode + " not yet implemented")
-#        else:
-#            raise Exception("Unexpected view mode")
+        #        elif mode == 'random':
+        #            raise Exception("Viewing type " + mode + " not yet implemented")
+        #        elif mode == 'position':
+        #            raise Exception("Viewing type " + mode + " not yet implemented")
+        #        elif mode == 'views':
+        #            raise Exception("Viewing type " + mode + " not yet implemented")
+        #        elif mode == 'upvotes':
+        #            raise Exception("Viewing type " + mode + " not yet implemented")
+        #        else:
+        #            raise Exception("Unexpected view mode")
 
         return self.viewHistory, self.evalHistory
+
+
+def wilsonScoreInterval(ups, downs, confidence=.9):
+    n = ups + downs
+    if n == 0:
+        return 0
+    z = (a + 1) / 2
+    phat = ups / n
+    lower = ((phat + z * z / (2 * n) - z * sqrt(
+        (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
+    upper = ((phat + z * z / (2 * n) + z * sqrt(
+        (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
+    return (lower, upper)

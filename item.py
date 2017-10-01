@@ -17,7 +17,7 @@ class Item(object):
         self.iid = iid
         self.quality = quality
         self.views = 0
-        self.votes = 0
+        self.votes = [0, 0]
         self.place = None
 
     def getID(self):
@@ -31,7 +31,7 @@ class Item(object):
 
     def getVotes(self):
         return self.votes
-    
+
     def getPlace(self):
         return self.place
 
@@ -40,9 +40,9 @@ class Item(object):
             raise Exception("Setting vote for unevaluated item with id: " +
                             str(self.iid))
         elif evaluation > 0:
-            self.votes += 1
+            self.votes[0] += 1
         else:
-            self.votes -= 1
-    
+            self.votes[1] += 1
+
     def setPlace(self, p):
         self.place = p
