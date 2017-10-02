@@ -58,8 +58,8 @@ def simulation(num_simulation,num_item,num_user,mode,evalMethod):
         
         # Measure the performance
         final_list = [itm for itm in platform.items.values()] # list of items
-        perfmeas = kendallTauDist(final_list)
-        dist.append(perfmeas['dist'])
+        ktds = kendallTauDist(final_list)
+        dist.append(ktds['dist'])
     return dist
 
 

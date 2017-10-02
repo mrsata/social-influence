@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from measurements import *
 
 
 class Platform(object):
@@ -33,6 +34,7 @@ class Platform(object):
         self.itemRanking = None
         self.itemPlacement = None
         self.placeOfItems = None
+        self.perfmeas = list()
 
     def rankItems(self, mode='quality'):
         # Rank items with given mode of ranking policies from
@@ -80,7 +82,7 @@ class Platform(object):
         self.itemPlacement = placement
         return placement
 
-    def run(self, mode, evalMethod='abs_quality', run_mode='all'):
+    def run(self, mode, evalMethod='abs_quality', run_mode='all',perfmeasK=10):
         # Run a simulation with given mode of viewing policies from
         # ['all', 'random', 'position', 'views', 'upvotes']
         #        print('viewMode: ' + run_mode)
@@ -97,6 +99,15 @@ class Platform(object):
                         self.items[iid].setVotes(evalutaion)
                 self.rankItems(mode=mode)
                 self.placeItems(mode='all')
+                #***** measure the performances
+                cur_list = [itm for itm in self.items.values()]  
+                # kendall Tau Distance
+                ktd = kendallTauDist(cur_list, final_placements = [i + 1 for i in self.placeOfItems], rank_std="random")
+                # Top K Percentage
+                topK = topKinK(cur_list,K=perfmeasK,final_order = self.itemRanking, rank_std="random")
+                perfmea = {'ktd':ktd['dist'],'topK':topK['percent']}
+                self.perfmeas.append(perfmea)
+                #**********
         else:
             # Permutates users with items
             for uid in self.users.keys():
@@ -127,7 +138,7 @@ def wilsonScoreInterval(ups, downs, confidence=.9):
     n = ups + downs
     if n == 0:
         return 0
-    z = (a + 1) / 2
+    z = (confidence + 1) / 2
     phat = ups / n
     lower = ((phat + z * z / (2 * n) - z * sqrt(
         (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))

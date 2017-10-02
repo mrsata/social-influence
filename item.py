@@ -31,6 +31,12 @@ class Item(object):
 
     def getVotes(self):
         return self.votes
+    
+    def getUpVotes(self):
+        return self.votes[0]
+    
+    def getDownVotes(self):
+        return self.votes[1]
 
     def getPlace(self):
         return self.place
