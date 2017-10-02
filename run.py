@@ -31,7 +31,7 @@ users = {}
 lower, upper = 0, 1  # lower and upper bound of item quality
 ability_range = range(1, 6)  # ability of 1~5
 K = 20 # number of items for performance measurement "top K in expected top K"
-rankMode = "quality"
+rankMode = args.rankMode
 
 #********** Initilization
 #***** Initialization of items
@@ -83,7 +83,7 @@ final_list = [itm for itm in platform.items.values()]  # list of items
 print ()
 print ("-----Final Performance after",num_user,"runs-----")
 #***** kendall Tau Distance
-final_ranking = [i + 1 for i in platform.placeOfItems]  # places of items 
+final_ranking = [i + 1 for i in platform.placeOfItems]  # places of items
 ktd = kendallTauDist(final_list, final_placements = final_ranking, rank_std="quality")
 print ()
 print("Kendall tau distance:", ktd['dist'])
@@ -120,7 +120,7 @@ if plotPerf:
     plt.legend()
     plt.grid()
     plt.show()
-    
+
     fig_idx += 1
     plt.figure(fig_idx)
     plt.plot(topKs1,label='rank by %s'%(rankMode))
@@ -132,7 +132,7 @@ if plotPerf:
     plt.legend()
     plt.grid()
     plt.show()
-    
+
 if plotHistory:
     # Plot the evalution history
     fig_idx += 1
@@ -151,5 +151,3 @@ if plotHistory:
         fontsize=6)
     plt.colorbar(orientation='horizontal')
     plt.show()
-
-
