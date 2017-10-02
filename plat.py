@@ -56,13 +56,13 @@ class Platform(object):
         elif mode == 'upvotes':
             ranking = sorted(
                 self.items.keys(),
-                key=lambda x: self.items[x].getVotes()[0],
+                key=lambda x: self.items[x].getUpVotes(),
                 reverse=True)
         elif mode == 'ucb':
             ranking = sorted(
                 self.items.keys(),
                 key=
-                lambda x: wilsonScoreInterval(self.items[x].getVotes()[0], self.items[x].getVotes()[1])[0],
+                lambda x: wilsonScoreInterval(self.items[x].getUpVotes(), self.items[x].getDownVotes()),
                 reverse=True)
             # In case of zero division, sort by quality if item.getViews() == 0
         else:
@@ -100,7 +100,7 @@ class Platform(object):
                 self.rankItems(mode=mode)
                 self.placeItems(mode='all')
                 #***** measure the performances
-                cur_list = [itm for itm in self.items.values()]  
+                cur_list = [itm for itm in self.items.values()]
                 # kendall Tau Distance
                 ktd = kendallTauDist(cur_list, final_placements = [i + 1 for i in self.placeOfItems], rank_std="random")
                 # Top K Percentage
@@ -137,11 +137,11 @@ class Platform(object):
 def wilsonScoreInterval(ups, downs, confidence=.9):
     n = ups + downs
     if n == 0:
-        return 0
+        return (0, 0)
     z = (confidence + 1) / 2
     phat = ups / n
-    lower = ((phat + z * z / (2 * n) - z * sqrt(
+    lower = ((phat + z * z / (2 * n) - z * np.sqrt(
         (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
-    upper = ((phat + z * z / (2 * n) + z * sqrt(
+    upper = ((phat + z * z / (2 * n) + z * np.sqrt(
         (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
     return (lower, upper)
