@@ -13,19 +13,19 @@ from measurements import *
 t0 = time.time()
 print ("-----Start")
 parser = argparse.ArgumentParser()
-parser.add_argument('--rankMode', type=str, default='quality')
+parser.add_argument('--rankMode', type=str, default='upvotes')
 parser.add_argument('--placeMode', type=str, default='all')
 parser.add_argument('--viewMode', type=str, default='all')
 args = parser.parse_args()
-rdm_quality = False
-plotPerf = True # performance
-plotQuality = False
-plotHistory = False
+rdm_quality = False  # assign item quality randomly
+plotPerf = True  # plot performance
+plotQuality = False  # plot item quality
+plotHistory = False  # plot rating history
 
 random.seed(123)
 fig_idx = 0
 num_item = 50
-num_user = 1000
+num_user = 10000
 items = {}
 users = {}
 lower, upper = 0, 1  # lower and upper bound of item quality
@@ -92,9 +92,14 @@ print("Expected rankings: ", ktd['exp_rank'])
 #***** Top K Percentage
 topK = topKinK(final_list,K=K,final_order = platform.itemRanking, rank_std="random")
 print ()
-print("Percentage of Top",K,"items that are actually in Top ",K,":",topK['percent'])
+print("Percentage of top",K,"items that are actually in top ",K,":",topK['percent'])
 print("Final top",K,"order:", topK['final_order'][:K])
 print("Expected top",K,"order:", topK['exp_order'][:K])
+#***** User Happiness (total #upvotes)
+happy = happiness(final_list,count="upvotes")
+#happiness = totalNumUpVotes/num_user
+print ()
+print("User happiness:", happy)
 
 # Timing
 print ()
@@ -105,10 +110,11 @@ print ("-----Simulation takes",t_done-t_ini)
 perfmeas1 = platform.perfmeas
 ktds1 = [pf['ktd'] for pf in perfmeas1]
 topKs1 = [pf['topK'] for pf in perfmeas1]
+happy1 = [pf['happy'] for pf in perfmeas1]
 
 #********** Plotting
 if plotPerf:
-    # Plot the trend of performance kendall tau distance
+    # kendall tau distance
     fig_idx += 1
     plt.figure(fig_idx)
     plt.plot(ktds1,label='rank by %s'%(rankMode))
@@ -121,6 +127,7 @@ if plotPerf:
     plt.grid()
     plt.show()
 
+    # top k in k
     fig_idx += 1
     plt.figure(fig_idx)
     plt.plot(topKs1,label='rank by %s'%(rankMode))
@@ -132,6 +139,20 @@ if plotPerf:
     plt.legend()
     plt.grid()
     plt.show()
+    
+    # user happiness
+    fig_idx += 1
+    plt.figure(fig_idx)
+    plt.plot(happy1,label='rank by %s'%(rankMode))
+    plt.title('user happiness VS. time')
+    plt.minorticks_on()
+    plt.xlabel('time')
+    plt.ylabel('user happiness')
+    plt.ylim([0,1.1])
+    plt.legend()
+    plt.grid()
+    plt.show()
+
 
 if plotHistory:
     # Plot the evalution history
