@@ -13,7 +13,7 @@ from measurements import *
 t0 = time.time()
 print ("-----Start")
 parser = argparse.ArgumentParser()
-parser.add_argument('--rankMode', type=str, default='upvotes')
+parser.add_argument('--rankMode', type=str, default='ucb')
 parser.add_argument('--placeMode', type=str, default='all')
 parser.add_argument('--viewMode', type=str, default='all')
 args = parser.parse_args()
@@ -96,7 +96,7 @@ print("Percentage of top",K,"items that are actually in top ",K,":",topK['percen
 print("Final top",K,"order:", topK['final_order'][:K])
 print("Expected top",K,"order:", topK['exp_order'][:K])
 #***** User Happiness (total #upvotes)
-happy = happiness(final_list,count="upvotes")
+happy = happiness(final_list,num_user,count="upvotes")
 #happiness = totalNumUpVotes/num_user
 print ()
 print("User happiness:", happy)
