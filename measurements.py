@@ -46,3 +46,13 @@ def topKinK(itms,K,final_order = None,rank_std="random"):
     return {'percent':topK,'exp_order':exp_order,'final_order':final_order}
     
 
+def happiness(itms,count="both"):
+    if count=="upvotes":
+        num_upvotes = [itm.getUpVotes() for itm in itms]
+    elif count=="downvotes":
+        num_upvotes = [-itm.getDownVotes() for itm in itms]
+    else:
+        num_upvotes = [itm.getUpVotes()-itm.getDownVotes() for itm in itms]
+    num_views = [itm.getViews() for itm in itms]
+    vote_view_ratio = np.sum(num_upvotes)/np.sum(num_views) 
+    return vote_view_ratio
