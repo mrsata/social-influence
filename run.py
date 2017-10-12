@@ -79,27 +79,7 @@ viewHistory, evalHistory = platform.run(
 accum_evals = np.cumsum(evalHistory, axis=1)  # accumulation of evaluations
 
 #********** Performance Measurements
-final_list = [itm for itm in platform.items.values()]  # list of items
-print ()
-print ("-----Final Performance after",num_user,"runs-----")
-#***** kendall Tau Distance
-final_ranking = [i + 1 for i in platform.placeOfItems]  # places of items
-ktd = kendallTauDist(final_list, final_placements = final_ranking, rank_std="quality")
-print ()
-print("Kendall tau distance:", ktd['dist'])
-print("Final rankings: ", ktd['final_rank'])
-print("Expected rankings: ", ktd['exp_rank'])
-#***** Top K Percentage
-topK = topKinK(final_list,K=K,final_order = platform.itemRanking, rank_std="random")
-print ()
-print("Percentage of top",K,"items that are actually in top ",K,":",topK['percent'])
-print("Final top",K,"order:", topK['final_order'][:K])
-print("Expected top",K,"order:", topK['exp_order'][:K])
-#***** User Happiness (total #upvotes)
-happy = happiness(final_list,num_user,count="upvotes")
-#happiness = totalNumUpVotes/num_user
-print ()
-print("User happiness:", happy)
+printPerfmeas(platform,num_user,K)
 
 # Timing
 print ()
@@ -116,59 +96,14 @@ happy1 = [pf['happy'] for pf in perfmeas1]
 if plotPerf:
     # kendall tau distance
     fig_idx += 1
-    plt.figure(fig_idx)
-    plt.plot(ktds1,label='rank by %s'%(rankMode))
-    plt.title('kendall tau distance VS. time')
-    plt.minorticks_on()
-    plt.xlabel('time')
-    plt.ylabel('kendall tau distance')
-    plt.ylim([0,1.1])
-    plt.legend()
-    plt.grid()
-    plt.show()
-
+    plotKDT(fig_idx,ktds1,rankMode)
     # top k in k
     fig_idx += 1
-    plt.figure(fig_idx)
-    plt.plot(topKs1,label='rank by %s'%(rankMode))
-    plt.title('percentage of top %d in %d VS. time'%(K,K))
-    plt.minorticks_on()
-    plt.xlabel('time')
-    plt.ylabel('percentage of top %d in %d '%(K,K))
-    plt.ylim([0,1.1])
-    plt.legend()
-    plt.grid()
-    plt.show()
-    
+    plotTopK(fig_idx,topKs1,rankMode,K)
     # user happiness
     fig_idx += 1
-    plt.figure(fig_idx)
-    plt.plot(happy1,label='rank by %s'%(rankMode))
-    plt.title('user happiness VS. time')
-    plt.minorticks_on()
-    plt.xlabel('time')
-    plt.ylabel('user happiness')
-    plt.ylim([0,1.1])
-    plt.legend()
-    plt.grid()
-    plt.show()
-
+    plotHappiness(fig_idx,happy1,rankMode)
 
 if plotHistory:
-    # Plot the evalution history
     fig_idx += 1
-    plt.figure(fig_idx)
-    plt.imshow(evalHistory, cmap=plt.cm.Blues, interpolation='nearest')
-    plt.title('Individual Evaluation History')
-    plt.minorticks_on()
-    plt.xlabel('user')
-    plt.ylabel('item')
-    plt.tick_params(labelright='on')
-    plt.yticks(
-        range(0, num_item), [
-            str(i) + "(" + str(int(itm.getQuality() * 100) / 100) + ")"
-            for i, itm in enumerate(platform.items.values())
-        ],
-        fontsize=6)
-    plt.colorbar(orientation='horizontal')
-    plt.show()
+    fig_idx = plotEvalHistory(fig_idx,platform,evalHistory,num_item)
