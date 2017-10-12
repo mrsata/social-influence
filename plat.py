@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats as st
 import random
 from measurements import *
 
@@ -127,10 +128,10 @@ class Platform(object):
                 #    if evalutaion:
                 #        self.evalHistory[iid][uid] = evalutaion
                 #        self.items[iid].setVotes(evalutaion)
-                
+
                 ########
                 # first 500 runs random to get initial data
-                if uid < 500:
+                if uid < 2000:
                     self.rankItems(mode='random')
                 else:
                     self.rankItems(mode=mode)
@@ -180,7 +181,9 @@ def wilsonScoreInterval(ups, downs, confidence=.9):
     n = ups + downs
     if n == 0:
         return (0, 0)
-    z = (confidence + 1) / 2
+    # z = st.norm.ppf((1 + confidence) / 2)
+    # z = 1.2815515655446004  # confidence = .8
+    z = 1.6448536269514722  # confidence = .9
     phat = ups / n
     lower = ((phat + z * z / (2 * n) - z * np.sqrt(
         (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
