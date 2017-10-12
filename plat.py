@@ -105,6 +105,7 @@ class Platform(object):
                     iid = self.itemRanking[itm_place[0]]
                 else:
                     iid = np.random.choice(self.num_item, 1)
+                  
                 self.viewHistory[iid][uid] += 1
                 self.items[iid].views += 1
                 evalutaion = self.users[uid].view(self.items[iid],
@@ -129,6 +130,7 @@ class Platform(object):
                     self.rankItems(mode=mode)
                 ########
                 
+
                 self.placeItems(mode='all')
                 #***** measure the performances after first 10 runs
                 
@@ -139,6 +141,7 @@ class Platform(object):
                 topK = topKinK(cur_list,K=perfmeasK,final_order = self.itemRanking, rank_std="random")
                 # User Happiness
                 happy = happiness(cur_list,uid+1,count="upvotes")
+
                 perfmea = {'ktd':ktd['dist'],'topK':topK['percent'],'happy':happy}
                 self.perfmeas.append(perfmea)
                 #**********

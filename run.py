@@ -81,6 +81,7 @@ accum_evals = np.cumsum(evalHistory, axis=1)  # accumulation of evaluations
 #********** Performance Measurements
 printPerfmeas(platform,num_user,K)
 
+
 # Timing
 print ()
 t_done = time.time()
