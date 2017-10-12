@@ -89,14 +89,23 @@ class Platform(object):
         if run_mode == 'all':
             # Permutates users with items
             for uid in self.users.keys():
-                # user view a single item at a time
-                viewProb = [0.97**(i+1) for i in range(0,self.num_item)]
-                viewProb = viewProb/np.sum(viewProb)
-                itm_place = np.random.choice(self.num_item, 1, p=viewProb)
+                # user view the first in ranking
                 if self.itemRanking:
-                    iid = self.itemRanking[itm_place[0]]
+                    iid = self.itemRanking[0]
                 else:
-                    iid = np.random.choice(self.num_item, 1)
+                    iid = sorted(
+                self.items.keys(),
+                key=lambda x: self.items[x].getQuality(),
+                reverse=True)[0]
+#                # OLD: user view a single item at a time
+#                viewProb = [0.97**(i+1) for i in range(0,self.num_item)]
+#                viewProb = viewProb/np.sum(viewProb)
+#                itm_place = np.random.choice(self.num_item, 1, p=viewProb)
+#                if self.itemRanking:
+#                    iid = self.itemRanking[itm_place[0]]
+#                else:
+#                    iid = np.random.choice(self.num_item, 1)
+
                 self.viewHistory[iid][uid] += 1
                 self.items[iid].views += 1
                 evalutaion = self.users[uid].view(self.items[iid],
@@ -113,16 +122,26 @@ class Platform(object):
 #                    if evalutaion:
 #                        self.evalHistory[iid][uid] = evalutaion
 #                        self.items[iid].setVotes(evalutaion)
-                self.rankItems(mode=mode)
+                ########
+                # first 500 runs random to get initial data
+                if uid <500:
+                    self.rankItems(mode='random')
+                else:
+                    self.rankItems(mode=mode)
+                ########
+                
+
                 self.placeItems(mode='all')
-                #***** measure the performances
+                #***** measure the performances after first 10 runs
+                
                 cur_list = [itm for itm in self.items.values()]
                 # kendall Tau Distance
                 ktd = kendallTauDist(cur_list, final_placements = [i + 1 for i in self.placeOfItems], rank_std="random")
                 # Top K Percentage
                 topK = topKinK(cur_list,K=perfmeasK,final_order = self.itemRanking, rank_std="random")
                 # User Happiness
-                happy = happiness(cur_list,count="upvotes")
+                happy = happiness(cur_list,uid+1,count="upvotes")
+
                 perfmea = {'ktd':ktd['dist'],'topK':topK['percent'],'happy':happy}
                 self.perfmeas.append(perfmea)
                 #**********
