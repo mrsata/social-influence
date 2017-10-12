@@ -90,22 +90,22 @@ class Platform(object):
             # Permutates users with items
             for uid in self.users.keys():
                 # user view the first in ranking
-                if self.itemRanking:
-                    iid = self.itemRanking[0]
-                else:
-                    iid = sorted(
-                self.items.keys(),
-                key=lambda x: self.items[x].getQuality(),
-                reverse=True)[0]
-#                # OLD: user view a single item at a time
-#                viewProb = [0.97**(i+1) for i in range(0,self.num_item)]
-#                viewProb = viewProb/np.sum(viewProb)
-#                itm_place = np.random.choice(self.num_item, 1, p=viewProb)
 #                if self.itemRanking:
-#                    iid = self.itemRanking[itm_place[0]]
+#                    iid = self.itemRanking[0]
 #                else:
-#                    iid = np.random.choice(self.num_item, 1)
-
+#                    iid = sorted(
+#                self.items.keys(),
+#                key=lambda x: self.items[x].getQuality(),
+#                reverse=True)[0]
+#                # OLD: user view a single item at a time
+                viewProb = [0.97**(i+1) for i in range(0,self.num_item)]
+                viewProb = viewProb/np.sum(viewProb)
+                itm_place = np.random.choice(self.num_item, 1, p=viewProb)
+                if self.itemRanking:
+                    iid = self.itemRanking[itm_place[0]]
+                else:
+                    iid = np.random.choice(self.num_item, 1)
+                  
                 self.viewHistory[iid][uid] += 1
                 self.items[iid].views += 1
                 evalutaion = self.users[uid].view(self.items[iid],
