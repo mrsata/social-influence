@@ -56,15 +56,20 @@ class Platform(object):
         elif mode == 'upvotes':
             ranking = sorted(
                 self.items.keys(),
-                key=lambda x: self.items[x].getUpVotes(),
+                key=lambda x: self.items[x].getUpVotes()/sum(self.items[x].getVotes()) if self.items[x].getUpVotes() else 0,
+                reverse=True)
+        elif mode == 'lcb':
+            ranking = sorted(
+                self.items.keys(),
+                key=
+                lambda x: wilsonScoreInterval(self.items[x].getUpVotes(), self.items[x].getDownVotes())[0],
                 reverse=True)
         elif mode == 'ucb':
             ranking = sorted(
                 self.items.keys(),
                 key=
-                lambda x: wilsonScoreInterval(self.items[x].getUpVotes(), self.items[x].getDownVotes()),
+                lambda x: wilsonScoreInterval(self.items[x].getUpVotes(), self.items[x].getDownVotes())[1],
                 reverse=True)
-            # In case of zero division, sort by quality if item.getViews() == 0
         else:
             raise Exception("Unexpected rank mode")
         self.itemRanking = ranking
@@ -82,7 +87,8 @@ class Platform(object):
         self.itemPlacement = placement
         return placement
 
-    def run(self, mode, evalMethod='abs_quality', run_mode='all',perfmeasK=10):
+    def run(self, mode, evalMethod='abs_quality', run_mode='all',
+            perfmeasK=10):
         # Run a simulation with given mode of viewing policies from
         # ['all', 'random', 'position', 'views', 'upvotes']
         #        print('viewMode: ' + run_mode)
@@ -90,59 +96,69 @@ class Platform(object):
             # Permutates users with items
             for uid in self.users.keys():
                 # user view the first in ranking
-#                if self.itemRanking:
-#                    iid = self.itemRanking[0]
-#                else:
-#                    iid = sorted(
-#                self.items.keys(),
-#                key=lambda x: self.items[x].getQuality(),
-#                reverse=True)[0]
-#                # OLD: user view a single item at a time
-                viewProb = [0.97**(i+1) for i in range(0,self.num_item)]
-                viewProb = viewProb/np.sum(viewProb)
+                # if self.itemRanking:
+                #    iid = self.itemRanking[0]
+                # else:
+                #    iid = sorted(
+                # self.items.keys(),
+                # key=lambda x: self.items[x].getQuality(),
+                # reverse=True)[0]
+                # OLD: user view a single item at a time
+                viewProb = [0.97**(i + 1) for i in range(0, self.num_item)]
+                viewProb = viewProb / np.sum(viewProb)
                 itm_place = np.random.choice(self.num_item, 1, p=viewProb)
                 if self.itemRanking:
                     iid = self.itemRanking[itm_place[0]]
                 else:
                     iid = np.random.choice(self.num_item, 1)
-                  
+
                 self.viewHistory[iid][uid] += 1
                 self.items[iid].views += 1
-                evalutaion = self.users[uid].view(self.items[iid],
-                                                      evalMethod)
+                evalutaion = self.users[uid].view(self.items[iid], evalMethod)
                 if evalutaion:
                     self.evalHistory[iid][uid] = evalutaion
                     self.items[iid].setVotes(evalutaion)
                 # OLD: user view multiple items at a time
-#                for iid in self.itemPlacement:                    
-#                    evalutaion = self.users[uid].view(self.items[iid],
-#                                                      evalMethod)
-#                    self.viewHistory[iid][uid] += 1
-#                    self.items[iid].views += 1
-#                    if evalutaion:
-#                        self.evalHistory[iid][uid] = evalutaion
-#                        self.items[iid].setVotes(evalutaion)
+                # for iid in self.itemPlacement:
+                #    evalutaion = self.users[uid].view(self.items[iid],
+                #                                      evalMethod)
+                #    self.viewHistory[iid][uid] += 1
+                #    self.items[iid].views += 1
+                #    if evalutaion:
+                #        self.evalHistory[iid][uid] = evalutaion
+                #        self.items[iid].setVotes(evalutaion)
+                
                 ########
                 # first 500 runs random to get initial data
-                if uid <500:
+                if uid < 500:
                     self.rankItems(mode='random')
                 else:
                     self.rankItems(mode=mode)
                 ########
-                
 
                 self.placeItems(mode='all')
                 #***** measure the performances after first 10 runs
-                
+
                 cur_list = [itm for itm in self.items.values()]
                 # kendall Tau Distance
-                ktd = kendallTauDist(cur_list, final_placements = [i + 1 for i in self.placeOfItems], rank_std="random")
+                ktd = kendallTauDist(
+                    cur_list,
+                    final_placements=[i + 1 for i in self.placeOfItems],
+                    rank_std="random")
                 # Top K Percentage
-                topK = topKinK(cur_list,K=perfmeasK,final_order = self.itemRanking, rank_std="random")
+                topK = topKinK(
+                    cur_list,
+                    K=perfmeasK,
+                    final_order=self.itemRanking,
+                    rank_std="random")
                 # User Happiness
-                happy = happiness(cur_list,uid+1,count="upvotes")
+                happy = happiness(cur_list, uid + 1, count="upvotes")
 
-                perfmea = {'ktd':ktd['dist'],'topK':topK['percent'],'happy':happy}
+                perfmea = {
+                    'ktd': ktd['dist'],
+                    'topK': topK['percent'],
+                    'happy': happy
+                }
                 self.perfmeas.append(perfmea)
                 #**********
         else:
@@ -156,17 +172,6 @@ class Platform(object):
                     if evalutaion:
                         self.evalHistory[iid][uid] = evalutaion
                         self.items[iid].setVotes(evalutaion)
-        # TODO: finish all different modes
-        #        elif mode == 'random':
-        #            raise Exception("Viewing type " + mode + " not yet implemented")
-        #        elif mode == 'position':
-        #            raise Exception("Viewing type " + mode + " not yet implemented")
-        #        elif mode == 'views':
-        #            raise Exception("Viewing type " + mode + " not yet implemented")
-        #        elif mode == 'upvotes':
-        #            raise Exception("Viewing type " + mode + " not yet implemented")
-        #        else:
-        #            raise Exception("Unexpected view mode")
 
         return self.viewHistory, self.evalHistory
 

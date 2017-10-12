@@ -23,6 +23,7 @@ plotQuality = False  # plot item quality
 plotHistory = False  # plot rating history
 
 random.seed(123)
+np.random.seed(123)
 fig_idx = 0
 num_item = 50
 num_user = 10000
