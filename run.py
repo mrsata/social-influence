@@ -13,7 +13,7 @@ from measurements import *
 t0 = time.time()
 print ("-----Start")
 parser = argparse.ArgumentParser()
-parser.add_argument('--rankMode', type=str, default='ucb')
+parser.add_argument('--rankMode', type=str, default='random')
 parser.add_argument('--placeMode', type=str, default='all')
 parser.add_argument('--viewMode', type=str, default='all')
 args = parser.parse_args()
