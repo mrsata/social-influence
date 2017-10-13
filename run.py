@@ -16,7 +16,7 @@ print("-----Start")
 parser = argparse.ArgumentParser()
 parser.add_argument('--rankMode', type=str, default='random')
 parser.add_argument('--placeMode', type=str, default='all')
-parser.add_argument('--viewMode', type=str, default='all')
+parser.add_argument('--viewMode', type=str, default='first')
 args = parser.parse_args()
 rdm_quality = False  # assign item quality randomly
 plotPerf = True  # plot performance
@@ -41,6 +41,9 @@ rankMode3 = rankModes[3]
 rankMode4 = rankModes[4]
 rankMode5 = rankModes[5]
 rankMode6 = rankModes[6]
+
+viewModes = ['first', 'position']
+viewMode = viewModes[0]
 
 #********** Initilization
 #***** Initialization of items
@@ -90,42 +93,60 @@ platform = Platform(items=items, users=users)
 platform.rankItems(mode=rankMode)
 platform.placeItems(mode=args.placeMode)
 viewHistory, evalHistory = platform.run(
-    mode=rankMode, evalMethod="upvote_only", run_mode='all', perfmeasK=K)
+    rankMode=rankMode,
+    viewMode=viewMode,
+    evalMethod="upvote_only",
+    perfmeasK=K)
 accum_evals = np.cumsum(evalHistory, axis=1)  # accumulation of evaluations
 
 platform2 = Platform(items=items2, users=users)
 platform2.rankItems(mode=rankMode2)
 platform2.placeItems(mode=args.placeMode)
 viewHistory2, evalHistory2 = platform2.run(
-    mode=rankMode2, evalMethod="upvote_only", run_mode='all', perfmeasK=K)
+    rankMode=rankMode2,
+    viewMode=viewMode,
+    evalMethod="upvote_only",
+    perfmeasK=K)
 accum_evals2 = np.cumsum(evalHistory2, axis=1)
 
 platform3 = Platform(items=items3, users=users)
 platform3.rankItems(mode=rankMode3)
 platform3.placeItems(mode=args.placeMode)
 viewHistory3, evalHistory3 = platform3.run(
-    mode=rankMode3, evalMethod="upvote_only", run_mode='all', perfmeasK=K)
+    rankMode=rankMode3,
+    viewMode=viewMode,
+    evalMethod="upvote_only",
+    perfmeasK=K)
 accum_evals3 = np.cumsum(evalHistory3, axis=1)
 
 platform4 = Platform(items=items4, users=users)
 platform4.rankItems(mode=rankMode4)
 platform4.placeItems(mode=args.placeMode)
 viewHistory4, evalHistory4 = platform4.run(
-    mode=rankMode4, evalMethod="upvote_only", run_mode='all', perfmeasK=K)
+    rankMode=rankMode4,
+    viewMode=viewMode,
+    evalMethod="upvote_only",
+    perfmeasK=K)
 accum_evals4 = np.cumsum(evalHistory4, axis=1)
 
 platform5 = Platform(items=items5, users=users)
 platform5.rankItems(mode=rankMode5)
 platform5.placeItems(mode=args.placeMode)
 viewHistory5, evalHistory5 = platform5.run(
-    mode=rankMode5, evalMethod="upvote_only", run_mode='all', perfmeasK=K)
+    rankMode=rankMode5,
+    viewMode=viewMode,
+    evalMethod="upvote_only",
+    perfmeasK=K)
 accum_evals5 = np.cumsum(evalHistory5, axis=1)
 
 platform6 = Platform(items=items6, users=users)
 platform6.rankItems(mode=rankMode6)
 platform6.placeItems(mode=args.placeMode)
 viewHistory6, evalHistory6 = platform6.run(
-    mode=rankMode6, evalMethod="upvote_only", run_mode='all', perfmeasK=K)
+    rankMode=rankMode6,
+    viewMode=viewMode,
+    evalMethod="upvote_only",
+    perfmeasK=K)
 accum_evals6 = np.cumsum(evalHistory6, axis=1)
 
 #********** Performance Measurements
@@ -218,7 +239,7 @@ if plotPerf:
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('user happiness')
-    plt.ylim([0.5, 1.1])
+    plt.ylim([0, 1.1])
     plt.legend()
     plt.grid()
     plt.show()
