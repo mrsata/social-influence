@@ -36,10 +36,9 @@ class Platform(object):
         self.placeOfItems = None
         self.perfmeas = list()
 
-    def rankItems(self, mode='quality'):
+    def rankItems(self, mode='random', t=0):
         # Rank items with given mode of ranking policies from
-        # ['random', 'quality', 'views', 'upvotes', 'ucb']
-        #        print('rankMode: ' + mode)
+        # ['random', 'quality', 'ucb', 'lcb', 'upvotes', 'views']
         if mode == 'random':
             ranking = list(self.items.keys())
             random.shuffle(ranking)
@@ -56,19 +55,19 @@ class Platform(object):
         elif mode == 'upvotes':
             ranking = sorted(
                 self.items.keys(),
-                key=lambda x: self.items[x].getUpVotes()/sum(self.items[x].getVotes()) if self.items[x].getUpVotes() else 0,
+                key=lambda x: self.items[x].getUpVotes() / self.items[x].getViews() if self.items[x].getViews() else 0,
                 reverse=True)
         elif mode == 'lcb':
             ranking = sorted(
                 self.items.keys(),
                 key=
-                lambda x: wilsonScoreInterval(self.items[x].getUpVotes(), self.items[x].getDownVotes())[0],
+                lambda x: confidenceBound(self.items[x].getUpVotes(), self.items[x].getViews(), t, self.num_user)[0],
                 reverse=True)
         elif mode == 'ucb':
             ranking = sorted(
                 self.items.keys(),
                 key=
-                lambda x: wilsonScoreInterval(self.items[x].getUpVotes(), self.items[x].getDownVotes())[1],
+                lambda x: confidenceBound(self.items[x].getUpVotes(), self.items[x].getViews(), t, self.num_user)[1],
                 reverse=True)
         else:
             raise Exception("Unexpected rank mode")
@@ -79,7 +78,6 @@ class Platform(object):
         return ranking
 
     def placeItems(self, mode='all'):
-        #        print('placeMode: ' + mode)
         if mode == 'all':
             placement = self.itemRanking
         else:
@@ -87,23 +85,38 @@ class Platform(object):
         self.itemPlacement = placement
         return placement
 
-    def run(self, mode, evalMethod='abs_quality', run_mode='all',
+    # TODO: may seperate warmup from real run
+    # @staticmethod
+    # def warmup(items, num_iter=100, mode='random', evalMethod='abs_quality'):
+    #     user = User(0, 0)
+    #     itemRanking = list(items.keys())
+    #     for i in range(num_iter):
+    #         random.shuffle(itemRanking)
+    #         iid = itemRanking[0]
+    #         items[iid].views += 1
+    #         evalutaion = user.evaluate(items[iid], evalMethod)
+    #         if evalutaion:
+    #             items[iid].setVotes(evalutaion)
+
+    def run(self,
+            rankMode='random',
+            viewMode='first',
+            evalMethod='abs_quality',
             perfmeasK=10):
         # Run a simulation with given mode of viewing policies from
-        # ['all', 'random', 'position', 'views', 'upvotes']
-        #        print('viewMode: ' + run_mode)
-        if run_mode == 'all':
-            # Permutates users with items
-            for uid in self.users.keys():
+        # ['first', 'position']
+        for uid in self.users.keys():
+            if viewMode == 'first':
                 # user view the first in ranking
-                # if self.itemRanking:
-                #    iid = self.itemRanking[0]
-                # else:
-                #    iid = sorted(
-                # self.items.keys(),
-                # key=lambda x: self.items[x].getQuality(),
-                # reverse=True)[0]
-                # OLD: user view a single item at a time
+                if self.itemRanking:
+                    iid = self.itemRanking[0]
+                else:
+                    iid = sorted(
+                        self.items.keys(),
+                        key=lambda x: self.items[x].getQuality(),
+                        reverse=True)[0]
+            else:  # viewMode == 'position'
+                # OLD: user view a single item with position bias
                 viewProb = [0.97**(i + 1) for i in range(0, self.num_item)]
                 viewProb = viewProb / np.sum(viewProb)
                 itm_place = np.random.choice(self.num_item, 1, p=viewProb)
@@ -112,78 +125,81 @@ class Platform(object):
                 else:
                     iid = np.random.choice(self.num_item, 1)
 
-                self.viewHistory[iid][uid] += 1
-                self.items[iid].views += 1
-                evalutaion = self.users[uid].view(self.items[iid], evalMethod)
-                if evalutaion:
-                    self.evalHistory[iid][uid] = evalutaion
-                    self.items[iid].setVotes(evalutaion)
-                # OLD: user view multiple items at a time
-                # for iid in self.itemPlacement:
-                #    evalutaion = self.users[uid].view(self.items[iid],
-                #                                      evalMethod)
-                #    self.viewHistory[iid][uid] += 1
-                #    self.items[iid].views += 1
-                #    if evalutaion:
-                #        self.evalHistory[iid][uid] = evalutaion
-                #        self.items[iid].setVotes(evalutaion)
-                
-                ########
-                # first 500 runs random to get initial data
-                if uid < 500:
-                    self.rankItems(mode='random')
-                else:
-                    self.rankItems(mode=mode)
-                ########
+            self.viewHistory[iid][uid] += 1
+            self.items[iid].views += 1
+            evalutaion = self.users[uid].evaluate(self.items[iid], evalMethod)
+            if evalutaion:
+                self.evalHistory[iid][uid] = evalutaion
+                self.items[iid].setVotes(evalutaion)
 
-                self.placeItems(mode='all')
-                #***** measure the performances after first 10 runs
+            # OLD: user view multiple items at a time
+            # for iid in self.itemPlacement:
+            #    evalutaion = self.users[uid].view(self.items[iid],
+            #                                      evalMethod)
+            #    self.viewHistory[iid][uid] += 1
+            #    self.items[iid].views += 1
+            #    if evalutaion:
+            #        self.evalHistory[iid][uid] = evalutaion
+            #        self.items[iid].setVotes(evalutaion)
 
-                cur_list = [itm for itm in self.items.values()]
-                # kendall Tau Distance
-                ktd = kendallTauDist(
-                    cur_list,
-                    final_placements=[i + 1 for i in self.placeOfItems],
-                    rank_std="random")
-                # Top K Percentage
-                topK = topKinK(
-                    cur_list,
-                    K=perfmeasK,
-                    final_order=self.itemRanking,
-                    rank_std="random")
-                # User Happiness
-                happy = happiness(cur_list, uid + 1, count="upvotes")
+            ########
+            # first 500 runs random to get initial data
+            if uid < 0:
+                self.rankItems(mode='random')
+            else:
+                self.rankItems(mode=rankMode, t=uid + 1)
+            ########
 
-                perfmea = {
-                    'ktd': ktd['dist'],
-                    'topK': topK['percent'],
-                    'happy': happy
-                }
-                self.perfmeas.append(perfmea)
-                #**********
-        else:
-            # Permutates users with items
-            for uid in self.users.keys():
-                for iid in self.itemPlacement:
-                    evalutaion = self.users[uid].view(self.items[iid],
-                                                      evalMethod)
-                    self.viewHistory[iid][uid] += 1
-                    self.items[iid].views += 1
-                    if evalutaion:
-                        self.evalHistory[iid][uid] = evalutaion
-                        self.items[iid].setVotes(evalutaion)
+            self.placeItems(mode='all')
+            #***** measure the performances after first 10 runs
+
+            cur_list = [itm for itm in self.items.values()]
+            # kendall Tau Distance
+            ktd = kendallTauDist(
+                cur_list,
+                final_placements=[i + 1 for i in self.placeOfItems],
+                rank_std="random")
+            # Top K Percentage
+            topK = topKinK(
+                cur_list,
+                K=perfmeasK,
+                final_order=self.itemRanking,
+                rank_std="random")
+            # User Happiness
+            happy = happiness(cur_list, uid + 1, count="upvotes")
+
+            perfmea = {
+                'ktd': ktd['dist'],
+                'topK': topK['percent'],
+                'happy': happy
+            }
+            self.perfmeas.append(perfmea)
+            #**********
 
         return self.viewHistory, self.evalHistory
 
 
-def wilsonScoreInterval(ups, downs, confidence=.9):
-    n = ups + downs
-    if n == 0:
-        return (0, 0)
-    z = (confidence + 1) / 2
-    phat = ups / n
-    lower = ((phat + z * z / (2 * n) - z * np.sqrt(
-        (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
-    upper = ((phat + z * z / (2 * n) + z * np.sqrt(
-        (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
+# Old: inappropriate ucb with wsi
+# def wilsonScoreInterval(ups, downs, confidence=.9):
+#     n = ups + downs
+#     if n == 0:
+#         return (0, 999)
+#     # z = st.norm.ppf((1 + confidence) / 2)
+#     # z = 1.2815515655446004  # confidence = .8
+#     z = 1.6448536269514722  # confidence = .9
+#     phat = ups / n
+#     lower = ((phat + z * z / (2 * n) - z * np.sqrt(
+#         (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
+#     upper = ((phat + z * z / (2 * n) + z * np.sqrt(
+#         (phat * (1 - phat) + z * z / (4 * n)) / n)) / (1 + z * z / n))
+#     return (lower, upper)
+
+
+def confidenceBound(ups, views, t, T):
+    if views == 0:
+        return (999, 999)
+    c = 1
+    p = ups / views
+    lower = p - c * np.sqrt(np.log(T) / views)
+    upper = p + c * np.sqrt(np.log(T) / views)
     return (lower, upper)
