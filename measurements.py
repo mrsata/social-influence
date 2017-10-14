@@ -70,16 +70,16 @@ def happiness(itms, time, count="both"):
     else:
         num_upvotes = [itm.getUpVotes() - itm.getDownVotes() for itm in itms]
     sum_upvotes = np.sum(num_upvotes)
-    upvotes_t = sum_upvotes / time
+    upvotes_t = sum_upvotes / (time+10*len(itms))
     # num_views = [itm.getViews() for itm in itms]
     # vote_view_ratio = np.sum(num_upvotes)/np.sum(num_views)
     return upvotes_t
 
 
-def printPerfmeas(platform, num_user, K):
+def printPerfmeas(platform, num_user, K, rankMode=''):
     final_list = [itm for itm in platform.items.values()]  # list of items
     print()
-    print("-----Final Performance after", num_user, "runs-----")
+    print(rankMode,"-----Final Performance after", num_user, "runs-----")
     #***** kendall Tau Distance
     final_ranking = [i + 1 for i in platform.placeOfItems]  # places of items
     ktd = kendallTauDist(

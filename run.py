@@ -14,7 +14,7 @@ from measurements import *
 t0 = time.time()
 print("-----Start")
 parser = argparse.ArgumentParser()
-parser.add_argument('--rankMode', type=str, default='random')
+parser.add_argument('--rankMode', type=str, default='upvotes')
 parser.add_argument('--placeMode', type=str, default='all')
 parser.add_argument('--viewMode', type=str, default='first')
 args = parser.parse_args()
@@ -26,13 +26,13 @@ plotHistory = False  # plot rating history
 random.seed(123)
 np.random.seed(123)
 fig_idx = 0
-num_item = 50
-num_user = 10000
+num_item = 20
+num_user = 100000
 items = {}
 users = {}
 lower, upper = 0, 1  # lower and upper bound of item quality
 ability_range = range(1, 6)  # ability of 1~5
-K = 20  # number of items for performance measurement "top K in expected top K"
+K = 10  # number of items for performance measurement "top K in expected top K"
 # rankModes = ['', 'random', 'quality', 'views', 'upvotes', 'lcb', 'ucb']
 rankModes = ['', 'random', 'quality', 'ucb', 'lcb', 'upvotes', 'views']
 rankMode = args.rankMode
@@ -57,6 +57,8 @@ if not rdm_quality:  # assume item qualities follow a normal distribution betwee
         plt.hist(qualities, normed=True)
         plt.title("Distribution of Item Quality")
         plt.show()
+        
+user0 = User(0, ability_range[-1])
 # assign qualities to items
 for i in range(num_item):
     if rdm_quality:
@@ -64,6 +66,11 @@ for i in range(num_item):
     else:
         q = qualities[i]
     items[i] = Item(i, q)
+    # each item get 5 free views
+    for k in range(0,10):
+        initialEval = user0.evaluate(items[i], method='upvote_only')
+        if initialEval:
+            items[i].setVotes(initialEval) 
 # quality statistics
 qualities = [itm.getQuality() for itm in items.values()]
 mean_quality = np.mean(qualities)
@@ -71,6 +78,7 @@ min_quality = min(qualities)
 max_quality = max(qualities)
 print("Item Qualities: \n mean {} \n min  {} \n max  {}".format(
     mean_quality, min_quality, max_quality))
+
 
 #***** Initialization of users
 for i in range(num_user):
@@ -90,8 +98,6 @@ items5 = deepcopy(items)
 items6 = deepcopy(items)
 
 platform = Platform(items=items, users=users)
-platform.rankItems(mode=rankMode)
-platform.placeItems(mode=args.placeMode)
 viewHistory, evalHistory = platform.run(
     rankMode=rankMode,
     viewMode=viewMode,
@@ -100,8 +106,6 @@ viewHistory, evalHistory = platform.run(
 accum_evals = np.cumsum(evalHistory, axis=1)  # accumulation of evaluations
 
 platform2 = Platform(items=items2, users=users)
-platform2.rankItems(mode=rankMode2)
-platform2.placeItems(mode=args.placeMode)
 viewHistory2, evalHistory2 = platform2.run(
     rankMode=rankMode2,
     viewMode=viewMode,
@@ -110,8 +114,6 @@ viewHistory2, evalHistory2 = platform2.run(
 accum_evals2 = np.cumsum(evalHistory2, axis=1)
 
 platform3 = Platform(items=items3, users=users)
-platform3.rankItems(mode=rankMode3)
-platform3.placeItems(mode=args.placeMode)
 viewHistory3, evalHistory3 = platform3.run(
     rankMode=rankMode3,
     viewMode=viewMode,
@@ -120,8 +122,6 @@ viewHistory3, evalHistory3 = platform3.run(
 accum_evals3 = np.cumsum(evalHistory3, axis=1)
 
 platform4 = Platform(items=items4, users=users)
-platform4.rankItems(mode=rankMode4)
-platform4.placeItems(mode=args.placeMode)
 viewHistory4, evalHistory4 = platform4.run(
     rankMode=rankMode4,
     viewMode=viewMode,
@@ -130,8 +130,6 @@ viewHistory4, evalHistory4 = platform4.run(
 accum_evals4 = np.cumsum(evalHistory4, axis=1)
 
 platform5 = Platform(items=items5, users=users)
-platform5.rankItems(mode=rankMode5)
-platform5.placeItems(mode=args.placeMode)
 viewHistory5, evalHistory5 = platform5.run(
     rankMode=rankMode5,
     viewMode=viewMode,
@@ -140,8 +138,6 @@ viewHistory5, evalHistory5 = platform5.run(
 accum_evals5 = np.cumsum(evalHistory5, axis=1)
 
 platform6 = Platform(items=items6, users=users)
-platform6.rankItems(mode=rankMode6)
-platform6.placeItems(mode=args.placeMode)
 viewHistory6, evalHistory6 = platform6.run(
     rankMode=rankMode6,
     viewMode=viewMode,
@@ -150,12 +146,12 @@ viewHistory6, evalHistory6 = platform6.run(
 accum_evals6 = np.cumsum(evalHistory6, axis=1)
 
 #********** Performance Measurements
-printPerfmeas(platform, num_user, K)
-printPerfmeas(platform2, num_user, K)
-printPerfmeas(platform3, num_user, K)
-printPerfmeas(platform4, num_user, K)
-printPerfmeas(platform5, num_user, K)
-printPerfmeas(platform6, num_user, K)
+printPerfmeas(platform, num_user, K,rankMode)
+printPerfmeas(platform2, num_user, K,rankMode2)
+printPerfmeas(platform3, num_user, K,rankMode3)
+printPerfmeas(platform4, num_user, K,rankMode4)
+printPerfmeas(platform5, num_user, K,rankMode5)
+printPerfmeas(platform6, num_user, K,rankMode6)
 
 # Timing
 print()
@@ -203,7 +199,9 @@ if plotPerf:
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('kendall tau distance')
-    plt.ylim([0, 1.1])
+    y_lb = min(min(ktds1,ktds2,ktds3,ktds4,ktds5,ktds6))
+    y_lb = np.floor(y_lb*10)/10
+    plt.ylim([y_lb, 1.1])
     plt.legend()
     plt.grid()
     plt.show()
@@ -221,7 +219,9 @@ if plotPerf:
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('percentage of top %d in %d ' % (K, K))
-    plt.ylim([0, 1.1])
+    y_lb = min(min(topKs1,topKs2,topKs3,topKs4,topKs5,topKs6))
+    y_lb = np.floor(y_lb*10)/10
+    plt.ylim([y_lb, 1.1])
     plt.legend()
     plt.grid()
     plt.show()
@@ -239,7 +239,9 @@ if plotPerf:
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('user happiness')
-    plt.ylim([0, 1.1])
+    y_lb = min(min(happy1,happy2,happy3,happy4,happy5,happy6))
+    y_lb = np.floor(y_lb*10)/10
+    plt.ylim([y_lb, 1.1])
     plt.legend()
     plt.grid()
     plt.show()
