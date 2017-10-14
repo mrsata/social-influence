@@ -28,8 +28,7 @@ class User(object):
         # # The higher the place, the more likely the user chooses to view it.
         # prob = 0.97**(item_place+1) # 0.97^place
         # evaluation = self.evaluate(item,evalMethod) if random.random() < prob else 0
-        evaluation = random.random() < item.getQuality(
-        ) * 1.5  # prob of evaluate single item
+        evaluation = random.random() < item.getQuality() * 1.5  # prob of evaluate single item
         return evaluation
 
     def evaluate(self, item, method='abs_quality'):

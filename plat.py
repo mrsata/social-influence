@@ -101,10 +101,14 @@ class Platform(object):
     def run(self,
             rankMode='random',
             viewMode='first',
-            evalMethod='abs_quality',
+            evalMethod='upvote_only',
             perfmeasK=10):
         # Run a simulation with given mode of viewing policies from
         # ['first', 'position']
+        # Initialization
+        self.rankItems(mode=rankMode)
+        self.placeItems(mode='all')
+        # Run Start
         for uid in self.users.keys():
             if viewMode == 'first':
                 # user view the first in ranking
@@ -177,7 +181,7 @@ class Platform(object):
             #**********
 
         return self.viewHistory, self.evalHistory
-
+    
 
 # Old: inappropriate ucb with wsi
 # def wilsonScoreInterval(ups, downs, confidence=.9):
@@ -197,7 +201,7 @@ class Platform(object):
 
 def confidenceBound(ups, views, t, T):
     if views == 0:
-        return (999, 999)
+        return (9999, 9999)
     c = 1
     p = ups / views
     lower = p - c * np.sqrt(np.log(T) / views)
