@@ -180,8 +180,8 @@ class Platform(object):
             self.perfmeas.append(perfmea)
             #**********
 
-        return self.viewHistory, self.evalHistory
-    
+        return self.perfmeas
+
 
 # Old: inappropriate ucb with wsi
 # def wilsonScoreInterval(ups, downs, confidence=.9):
