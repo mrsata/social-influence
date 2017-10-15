@@ -152,7 +152,7 @@ def confidenceBound(items, T):
     ratio = np.true_divide(items[2], items[1], where=viewed)
     ratio = np.where(viewed, ratio, 9999)
     bound = np.true_divide(np.log(T), items[1], where=viewed)
-    bound = c * np.sqrt(bound)
+    bound = np.where(viewed, c * np.sqrt(bound), 0)
     lower = ratio - bound
     upper = ratio + bound
     return (lower, upper)

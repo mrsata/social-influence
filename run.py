@@ -1,7 +1,8 @@
 from copy import deepcopy
-import argparse
+from itertools import repeat
 import random
 import matplotlib.pyplot as plt
+import multiprocessing as mp
 import numpy as np
 import scipy.stats as stats
 import time
@@ -10,13 +11,6 @@ from item import Item
 from user import User
 from plat2d import Platform
 from measurements import *
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--rankMode', type=str, default='upvotes')
-parser.add_argument('--placeMode', type=str, default='all')
-parser.add_argument('--viewMode', type=str, default='first')
-args = parser.parse_args()
 
 random.seed(123)
 np.random.seed(123)
@@ -33,12 +27,6 @@ lower, upper = 0, 1  # lower and upper bound of item quality
 ability_range = range(1, 6)  # ability of 1~5
 K = 10  # number of items for performance measurement "top K in expected top K"
 rankModes = ['random', 'quality', 'ucb', 'lcb', 'upvotes', 'views']
-rankMode = args.rankMode
-rankMode2 = rankModes[1]
-rankMode3 = rankModes[2]
-rankMode4 = rankModes[3]
-rankMode5 = rankModes[4]
-rankMode6 = rankModes[5]
 viewModes = ['first', 'position']
 viewMode = viewModes[0]
 
@@ -67,7 +55,7 @@ for i in range(num_item):
         q = qualities[i]
     items[i] = Item(i, q)
     # each item get 5 free views
-    for k in range(0,10):
+    for k in range(0, 10):
         initialEval = user0.evaluate(items[i], method='upvote_only')
         if initialEval:
             items[i].setVotes(initialEval)
@@ -79,7 +67,6 @@ max_quality = max(qualities)
 print("Item Qualities: \n mean {} \n min  {} \n max  {}".format(
     mean_quality, min_quality, max_quality))
 
-
 #***** Initialization of users
 for i in range(num_user):
     a = random.choice(ability_range)
@@ -90,54 +77,21 @@ print("num_item: {}, num_user: {}".format(num_item, num_user))
 t_ini = time.time()
 print("-----Initialization takes", t_ini - t0)
 
+
 #********** Run simulation once
-items2 = deepcopy(items)
-items3 = deepcopy(items)
-items4 = deepcopy(items)
-items5 = deepcopy(items)
-items6 = deepcopy(items)
+def simulate(args):
+    items, users, rankMode = args
+    platform = Platform(items=deepcopy(items), users=users)
+    perfmeas = platform.run(
+        rankMode=rankMode,
+        viewMode=viewMode,
+        evalMethod="upvote_only",
+        perfmeasK=K)
+    return perfmeas
 
-platform = Platform(items=items, users=users)
-perfmeas1 = platform.run(
-    rankMode=rankMode,
-    viewMode=viewMode,
-    evalMethod="upvote_only",
-    perfmeasK=K)
 
-platform2 = Platform(items=items2, users=users)
-perfmeas2 = platform2.run(
-    rankMode=rankMode2,
-    viewMode=viewMode,
-    evalMethod="upvote_only",
-    perfmeasK=K)
-
-platform3 = Platform(items=items3, users=users)
-perfmeas3 = platform3.run(
-    rankMode=rankMode3,
-    viewMode=viewMode,
-    evalMethod="upvote_only",
-    perfmeasK=K)
-
-platform4 = Platform(items=items4, users=users)
-perfmeas4 = platform4.run(
-    rankMode=rankMode4,
-    viewMode=viewMode,
-    evalMethod="upvote_only",
-    perfmeasK=K)
-
-platform5 = Platform(items=items5, users=users)
-perfmeas5 = platform5.run(
-    rankMode=rankMode5,
-    viewMode=viewMode,
-    evalMethod="upvote_only",
-    perfmeasK=K)
-
-platform6 = Platform(items=items6, users=users)
-perfmeas6 = platform6.run(
-    rankMode=rankMode6,
-    viewMode=viewMode,
-    evalMethod="upvote_only",
-    perfmeasK=K)
+pool = mp.Pool(processes=6)
+perfmeas = pool.map(simulate, zip(repeat(items), repeat(users), rankModes))
 
 #********** Performance Measurements
 # printPerfmeas(platform, num_user, K,rankMode)
@@ -148,35 +102,31 @@ perfmeas6 = platform6.run(
 # printPerfmeas(platform6, num_user, K,rankMode6)
 
 # Timing
-print()
 t_done = time.time()
-print("-----Simulation takes", t_done - t_ini)
+print("\n-----Simulation takes", t_done - t_ini)
 
 #***** Trends of performances
+happy = list(map(lambda x: [pf['happy'] for pf in x], perfmeas))
 # ktds1 = [pf['ktd'] for pf in perfmeas1]
 # topKs1 = [pf['topK'] for pf in perfmeas1]
-happy1 = [pf['happy'] for pf in perfmeas1]
-
+# happy1 = [pf['happy'] for pf in perfmeas1]
 # ktds2 = [pf['ktd'] for pf in perfmeas2]
 # topKs2 = [pf['topK'] for pf in perfmeas2]
-happy2 = [pf['happy'] for pf in perfmeas2]
-
+# happy2 = [pf['happy'] for pf in perfmeas2]
 # ktds3 = [pf['ktd'] for pf in perfmeas3]
 # topKs3 = [pf['topK'] for pf in perfmeas3]
-happy3 = [pf['happy'] for pf in perfmeas3]
-
+# happy3 = [pf['happy'] for pf in perfmeas3]
 # ktds4 = [pf['ktd'] for pf in perfmeas4]
 # topKs4 = [pf['topK'] for pf in perfmeas4]
-happy4 = [pf['happy'] for pf in perfmeas4]
-
+# happy4 = [pf['happy'] for pf in perfmeas4]
 # ktds5 = [pf['ktd'] for pf in perfmeas5]
 # topKs5 = [pf['topK'] for pf in perfmeas5]
-happy5 = [pf['happy'] for pf in perfmeas5]
-
+# happy5 = [pf['happy'] for pf in perfmeas5]
 # ktds6 = [pf['ktd'] for pf in perfmeas6]
 # topKs6 = [pf['topK'] for pf in perfmeas6]
-happy6 = [pf['happy'] for pf in perfmeas6]
+# happy6 = [pf['happy'] for pf in perfmeas6]
 
+L = len(rankModes)
 #********** Plotting
 if plotPerf:
     # # kendall tau distance
@@ -222,18 +172,14 @@ if plotPerf:
     # user happiness
     fig_idx += 1
     plt.figure(fig_idx)
-    plotHappiness(plt, happy1, rankMode)
-    plotHappiness(plt, happy2, rankMode2)
-    plotHappiness(plt, happy3, rankMode3)
-    plotHappiness(plt, happy4, rankMode4)
-    plotHappiness(plt, happy5, rankMode5)
-    plotHappiness(plt, happy6, rankMode6)
+    for i in range(L):
+        plotHappiness(plt, happy[i], rankModes[i])
     plt.title('user happiness VS. time')
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('user happiness')
-    y_lb = min(min(happy1,happy2,happy3,happy4,happy5,happy6))
-    y_lb = np.floor(y_lb*10)/10
+    y_lb = np.min(np.array(happy))
+    y_lb = np.floor(y_lb * 10) / 10
     plt.ylim([y_lb, 1.1])
     plt.legend()
     plt.grid()
