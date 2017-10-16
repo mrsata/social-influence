@@ -29,7 +29,10 @@ class Platform(object):
         self.items = np.zeros((5, self.num_item))
         for k, v in items.items():
             self.items[0, k] = v.getQuality()
-        # quality, views, upvotes, downvotes, ranking
+            self.items[1, k] = v.getViews()
+            self.items[2, k] = v.getUpVotes()
+            self.items[3, k] = v.getDownVotes()
+        # rows: quality, views, upvotes, downvotes, ranking
         self.users = users
         self.viewHistory = np.zeros((self.num_item, self.num_user))
         self.evalHistory = np.zeros((self.num_item, self.num_user))
