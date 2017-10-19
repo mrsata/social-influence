@@ -19,7 +19,7 @@ plotHistory = False  # plot rating history
 fig_idx = 0
 num_runs = 10
 num_item = 20
-num_user = 6000
+num_user = 10000
 items = {}
 users = {}
 lower, upper = 0, 1  # lower and upper bound of item quality
@@ -58,7 +58,8 @@ def initialize(seed):
             q = qualities[i]
         items[i] = Item(i, q)
         # each item get 10 free views
-        for k in range(10):
+        for k in range(1):
+            items[i].views += 1
             initialEval = user0.evaluate(items[i], method='upvote_only')
             if initialEval:
                 items[i].setVotes(initialEval)
@@ -106,13 +107,12 @@ for i in range(len(rankModes)):
     result = pool.starmap_async(simulate,
                                 zip(items, users, repeat(rankModes[i])))
     results.append(result)
-    
+
 perfmeas = map(lambda x: x.get(), results)
 perfmeas = list(map(lambda x: x.get(), results))
 
 t_done = time.time()
 print("-----Simulation takes {:.4f}s".format(t_done - t_ini))
-
 
 #**********  Performance Measurements
 happy = [list(map(lambda x: [pf['happy'] for pf in x], p)) for p in perfmeas]
@@ -124,15 +124,15 @@ ktd = np.array(ktd)
 ktd = np.mean(ktd, axis=1)
 #for i in range(len(rankModes)):
 #    print("Mode: {:8} distance: {}".format(rankModes[i], ktd[i][-1]))
-    
+
 topK = [list(map(lambda x: [pf['topK'] for pf in x], p)) for p in perfmeas]
 topK = np.array(topK)
 topK = np.mean(topK, axis=1)
 #for i in range(len(rankModes)):
 #    print("Mode: {:8} top K percent: {}".format(rankModes[i], topK[i][-1]))
 for i in range(len(rankModes)):
-    print("Mode: {:8} \n happiness: {} \n distance: {} \n top K %: {}".format(rankModes[i], happy[i][-1], ktd[i][-1], topK[i][-1]))
-
+    print("Mode: {:8} \n happiness: {} \n distance: {} \n top K %: {}".format(
+        rankModes[i], happy[i][-1], ktd[i][-1], topK[i][-1]))
 
 #********** Plotting
 if plotPerf:
@@ -151,7 +151,7 @@ if plotPerf:
     plt.legend()
     plt.grid()
     plt.show()
-    
+
     # distance
     fig_idx += 1
     plt.figure(fig_idx)
@@ -167,7 +167,7 @@ if plotPerf:
     plt.legend()
     plt.grid()
     plt.show()
-    
+
     # top K
     fig_idx += 1
     plt.figure(fig_idx)
@@ -183,7 +183,7 @@ if plotPerf:
     plt.legend()
     plt.grid()
     plt.show()
-    
+
 if plotHistory:
     fig_idx += 1
     fig_idx = plotEvalHistory(fig_idx, platform, evalHistory, num_item)

@@ -53,8 +53,7 @@ class Platform(object):
         elif mode == 'views':
             ranking = np.argsort(-self.items[1])
         elif mode == 'upvotes':
-            viewed = self.items[1] > 0
-            ratio = np.true_divide(self.items[2], self.items[1], where=viewed)
+            ratio = np.true_divide(self.items[2], self.items[1])
             ranking = np.argsort(-ratio)
         elif mode == 'lcb':
             lower = confidenceBound(self.items, self.num_user)[0]
@@ -75,19 +74,6 @@ class Platform(object):
             raise Exception("Unexpected place mode")
         self.itemPlacement = placement
         return placement
-
-    # TODO: may seperate warmup from real run
-    # @staticmethod
-    # def warmup(items, num_iter=100, mode='random', evalMethod='abs_quality'):
-    #     user = User(0, 0)
-    #     itemRanking = list(items.keys())
-    #     for i in range(num_iter):
-    #         random.shuffle(itemRanking)
-    #         iid = itemRanking[0]
-    #         items[iid].views += 1
-    #         evalutaion = user.evaluate(items[iid], evalMethod)
-    #         if evalutaion:
-    #             items[iid].setVotes(evalutaion)
 
     def run(self,
             rankMode='random',
@@ -140,13 +126,12 @@ class Platform(object):
             time = uid + 1
             # Happiness
             sum_upvotes = np.sum(self.items[2])
-            upvotes_t = sum_upvotes / (time + 10 * self.num_item)
+            upvotes_t = sum_upvotes / (time + 1 * self.num_item)
             happy = upvotes_t
             # Kendall Tau Distance
             if rankMode == "random":
                 # Reorder the final list in #votes order if ranking strategy is random -> Ranking in descending upvotes order
-                viewed = self.items[1] > 0
-                ratio = np.true_divide(self.items[2], self.items[1], where=viewed)
+                ratio = np.true_divide(self.items[2], self.items[1])
                 final_rank = np.argsort(-ratio)
             else:
                 final_rank = self.itemRanking
@@ -156,11 +141,7 @@ class Platform(object):
             actual_top_K = final_rank[0:perfmeasK]
             in_top_K = set(expected_top_K).intersection(actual_top_K)
             topK = len(in_top_K) / perfmeasK
-            perfmea = {
-                 'ktd': tau,
-                 'topK': topK,
-                'happy': happy
-            }
+            perfmea = {'ktd': tau, 'topK': topK, 'happy': happy}
             self.perfmeas.append(perfmea)
 
         return self.perfmeas
@@ -168,12 +149,9 @@ class Platform(object):
 
 def confidenceBound(items, T):
     c = 1
-    viewed = items[1] > 0
-    ratio = np.true_divide(items[2], items[1], where=viewed)
-    ratio = np.where(viewed, ratio, 9999)
-    bound = np.true_divide(np.log(T), items[1], where=viewed)
-    bound = np.multiply(bound,bound>0)
-    bound = np.where(viewed, c * np.sqrt(bound), 0)
+    ratio = np.true_divide(items[2], items[1])
+    bound = np.true_divide(np.log(T), items[1])
+    bound = c * np.sqrt(bound)
     lower = ratio - bound
     upper = ratio + bound
     return (lower, upper)
