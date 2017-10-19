@@ -19,7 +19,7 @@ plotHistory = False  # plot rating history
 fig_idx = 0
 num_runs = 20
 num_item = 20
-num_user = 100000
+num_user = 10000
 items = {}
 users = {}
 lower, upper = 0, 1  # lower and upper bound of item quality
@@ -57,8 +57,9 @@ def initialize(seed):
         else:
             q = qualities[i]
         items[i] = Item(i, q)
-        # each item get 5 free views
-        for k in range(0, 10):
+        # each item get 10 free views
+        for k in range(1):
+            items[i].views += 1
             initialEval = user0.evaluate(items[i], method='upvote_only')
             if initialEval:
                 items[i].setVotes(initialEval)
@@ -106,16 +107,32 @@ for i in range(len(rankModes)):
     result = pool.starmap_async(simulate,
                                 zip(items, users, repeat(rankModes[i])))
     results.append(result)
-perfmeas = list(map(lambda x: x.get(), results))
 
-happy = [list(map(lambda x: [pf['happy'] for pf in x], p)) for p in perfmeas]
-happy = np.array(happy)
-happy = np.mean(happy, axis=1)
-for i in range(len(rankModes)):
-    print("Mode: {:8} happiness: {}".format(rankModes[i], happy[i][-1]))
+perfmeas = map(lambda x: x.get(), results)
+perfmeas = list(map(lambda x: x.get(), results))
 
 t_done = time.time()
 print("-----Simulation takes {:.4f}s".format(t_done - t_ini))
+
+#**********  Performance Measurements
+happy = [list(map(lambda x: [pf['happy'] for pf in x], p)) for p in perfmeas]
+happy = np.array(happy)
+happy = np.mean(happy, axis=1)
+
+ktd = [list(map(lambda x: [pf['ktd'] for pf in x], p)) for p in perfmeas]
+ktd = np.array(ktd)
+ktd = np.mean(ktd, axis=1)
+#for i in range(len(rankModes)):
+#    print("Mode: {:8} distance: {}".format(rankModes[i], ktd[i][-1]))
+
+topK = [list(map(lambda x: [pf['topK'] for pf in x], p)) for p in perfmeas]
+topK = np.array(topK)
+topK = np.mean(topK, axis=1)
+#for i in range(len(rankModes)):
+#    print("Mode: {:8} top K percent: {}".format(rankModes[i], topK[i][-1]))
+for i in range(len(rankModes)):
+    print("Mode: {:8} \n happiness: {} \n distance: {} \n top K %: {}".format(
+        rankModes[i], happy[i][-1], ktd[i][-1], topK[i][-1]))
 
 #********** Plotting
 if plotPerf:
@@ -129,6 +146,38 @@ if plotPerf:
     plt.xlabel('time')
     plt.ylabel('user happiness')
     y_lb = np.min(happy)
+    y_lb = np.floor(y_lb * 10) / 10
+    plt.ylim([y_lb, 1.1])
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    # distance
+    fig_idx += 1
+    plt.figure(fig_idx)
+    for i in range(len(rankModes)):
+        plotKDT(plt, ktd[i], rankModes[i])
+    plt.title('kendall tau distance VS. time')
+    plt.minorticks_on()
+    plt.xlabel('time')
+    plt.ylabel('kendall tau distance')
+    y_lb = np.min(ktd)
+    y_lb = np.floor(y_lb * 10) / 10
+    plt.ylim([y_lb, 1.1])
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    # top K
+    fig_idx += 1
+    plt.figure(fig_idx)
+    for i in range(len(rankModes)):
+        plotKDT(plt, topK[i], rankModes[i])
+    plt.title("top {} percentage VS. time".format(K))
+    plt.minorticks_on()
+    plt.xlabel('time')
+    plt.ylabel("top {} percentage".format(K))
+    y_lb = np.min(topK)
     y_lb = np.floor(y_lb * 10) / 10
     plt.ylim([y_lb, 1.1])
     plt.legend()
