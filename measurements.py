@@ -26,14 +26,19 @@ def kendallTauDist(itms, final_placements=None, rank_std="rdm"):
         # Reorder the final list in #votes order if ranking strategy is random
         # itms_final = sorted(itms_final, key=lambda x: x.getQuality(), reverse=True)
         # Ranking in descending upvotes order
-        final_rank = stats.rankdata(
-            [-itm.getUpVotes() for itm in itms_final], method='min')
+        viewed = itms_final[1] > 0
+        ratio = np.true_divide(self.itms_final[2], self.itms_final[1], where=viewed)
+        final_rank = np.argsort(-ratio)
+#        final_rank = stats.rankdata(
+#            [-itm.getUpVotes() for itm in itms_final], method='min')
     else:
-        final_rank = final_placements  # ranking in displaced order
+        final_rank = itms_final[-1]
+#        final_rank = final_placements  # ranking in displaced order
 
     # Ranking in descending quality order
-    desq_rank = stats.rankdata(
-        [-itm.getQuality() for itm in itms_final], method='min')
+    desq_rank = np.argsort(-itms_final[0])
+#    desq_rank = stats.rankdata(
+#        [-itm.getQuality() for itm in itms_final], method='min')
     # Calculate the Kendall tau distance
     tau, p_value = stats.kendalltau(desq_rank, final_rank)
     return {'final_rank': final_rank, 'exp_rank': desq_rank, 'dist': tau}

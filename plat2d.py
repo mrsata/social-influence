@@ -99,6 +99,9 @@ class Platform(object):
         # Initialization
         self.rankItems(mode=rankMode)
         self.placeItems(mode='all')
+        # Ranking in descending quality order
+        desq_rank = np.argsort(-self.items[0])
+        expected_top_K = desq_rank[0:perfmeasK]
         # Run Start
         for uid in range(self.num_user):
             if viewMode == 'first':
@@ -135,13 +138,27 @@ class Platform(object):
             self.placeItems(mode='all')
 
             time = uid + 1
+            # Happiness
             sum_upvotes = np.sum(self.items[2])
             upvotes_t = sum_upvotes / (time + 10 * self.num_item)
             happy = upvotes_t
-
+            # Kendall Tau Distance
+            if rankMode == "random":
+                # Reorder the final list in #votes order if ranking strategy is random -> Ranking in descending upvotes order
+                viewed = self.items[1] > 0
+                ratio = np.true_divide(self.items[2], self.items[1], where=viewed)
+                final_rank = np.argsort(-ratio)
+            else:
+                final_rank = self.itemRanking
+            # Calculate the Kendall tau distance
+            tau, p_value = stats.kendalltau(desq_rank, final_rank)
+            # Top K Percentage
+            actual_top_K = final_rank[0:perfmeasK]
+            in_top_K = set(expected_top_K).intersection(actual_top_K)
+            topK = len(in_top_K) / perfmeasK
             perfmea = {
-                # 'ktd': ktd['dist'],
-                # 'topK': topK['percent'],
+                 'ktd': tau,
+                 'topK': topK,
                 'happy': happy
             }
             self.perfmeas.append(perfmea)
@@ -155,6 +172,7 @@ def confidenceBound(items, T):
     ratio = np.true_divide(items[2], items[1], where=viewed)
     ratio = np.where(viewed, ratio, 9999)
     bound = np.true_divide(np.log(T), items[1], where=viewed)
+    bound = np.multiply(bound,bound>0)
     bound = np.where(viewed, c * np.sqrt(bound), 0)
     lower = ratio - bound
     upper = ratio + bound
