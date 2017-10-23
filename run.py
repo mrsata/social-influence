@@ -10,16 +10,16 @@ import time
 from item import Item
 from user import User
 from plat2d import Platform
-from measurements import *
 
 rdm_quality = False  # assign item quality randomly
-plotPerf = True  # plot performance
+calcPerf = [True,False,False]  # calculate performance (happiness,distance,topK)
 plotQuality = False  # plot item quality
 plotHistory = False  # plot rating history
 fig_idx = 0
+num_free = 1
 num_runs = 10
 num_item = 20
-num_user = 10000
+num_user = 1000
 items = {}
 users = {}
 lower, upper = 0, 1  # lower and upper bound of item quality
@@ -28,6 +28,7 @@ K = 10  # number of items for performance measurement "top K in expected top K"
 rankModes = ['random', 'quality', 'ucb', 'lcb', 'upvotes', 'views']
 viewModes = ['first', 'position']
 viewMode = viewModes[0]
+coeff = 0
 
 
 #********** Initilization
@@ -57,8 +58,8 @@ def initialize(seed):
         else:
             q = qualities[i]
         items[i] = Item(i, q)
-        # each item get 10 free views
-        for k in range(1):
+        # each item get free views
+        for k in range(num_free):
             items[i].views += 1
             initialEval = user0.evaluate(items[i], method='upvote_only')
             if initialEval:
@@ -79,6 +80,8 @@ def simulate(items, users, rankMode):
         rankMode=rankMode,
         viewMode=viewMode,
         evalMethod="upvote_only",
+        c = coeff,
+        perf = calcPerf,
         perfmeasK=K)
     return perfmeas
 
@@ -108,40 +111,39 @@ for i in range(len(rankModes)):
                                 zip(items, users, repeat(rankModes[i])))
     results.append(result)
 
-perfmeas = map(lambda x: x.get(), results)
+#perfmeas = map(lambda x: x.get(), results)
 perfmeas = list(map(lambda x: x.get(), results))
 
 t_done = time.time()
 print("-----Simulation takes {:.4f}s".format(t_done - t_ini))
 
 #**********  Performance Measurements
-happy = [list(map(lambda x: [pf['happy'] for pf in x], p)) for p in perfmeas]
-happy = np.array(happy)
-happy = np.mean(happy, axis=1)
+if calcPerf[0]:
+    happy = [list(map(lambda x: [pf['happy'] for pf in x], p)) for p in perfmeas]
+    happy = np.mean(np.array(happy), axis=1)
+    for i in range(len(rankModes)):
+        print("Mode: {:8} happiness: {}".format(rankModes[i], happy[i][-1]))
+    
+if calcPerf[1]:
+    ktd = [list(map(lambda x: [pf['ktd'] for pf in x], p)) for p in perfmeas]
+    ktd = np.mean(np.array(ktd), axis=1)
+    for i in range(len(rankModes)):
+        print("Mode: {:8} distance: {}".format(rankModes[i], ktd[i][-1]))
 
-ktd = [list(map(lambda x: [pf['ktd'] for pf in x], p)) for p in perfmeas]
-ktd = np.array(ktd)
-ktd = np.mean(ktd, axis=1)
-#for i in range(len(rankModes)):
-#    print("Mode: {:8} distance: {}".format(rankModes[i], ktd[i][-1]))
+if calcPerf[2]:
+    topK = [list(map(lambda x: [pf['topK'] for pf in x], p)) for p in perfmeas]
+    topK = np.mean(np.array(topK), axis=1)
+    for i in range(len(rankModes)):
+        print("Mode: {:8} top K percent: {}".format(rankModes[i], topK[i][-1]))
 
-topK = [list(map(lambda x: [pf['topK'] for pf in x], p)) for p in perfmeas]
-topK = np.array(topK)
-topK = np.mean(topK, axis=1)
-#for i in range(len(rankModes)):
-#    print("Mode: {:8} top K percent: {}".format(rankModes[i], topK[i][-1]))
-for i in range(len(rankModes)):
-    print("Mode: {:8} \n happiness: {} \n distance: {} \n top K %: {}".format(
-        rankModes[i], happy[i][-1], ktd[i][-1], topK[i][-1]))
 
 #********** Plotting
-if plotPerf:
-    # user happiness
+if calcPerf[0]: # user happiness
     fig_idx += 1
     plt.figure(fig_idx)
     for i in range(len(rankModes)):
-        plotHappiness(plt, happy[i], rankModes[i])
-    plt.title('user happiness VS. time')
+        plt.plot(happy[i], label='rank by %s' % (rankModes[i]))
+    plt.title('user happiness VS. time (c={})'.format(coeff))
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('user happiness')
@@ -152,12 +154,12 @@ if plotPerf:
     plt.grid()
     plt.show()
 
-    # distance
+if calcPerf[1]: # distance
     fig_idx += 1
     plt.figure(fig_idx)
     for i in range(len(rankModes)):
-        plotKDT(plt, ktd[i], rankModes[i])
-    plt.title('kendall tau distance VS. time')
+        plt.plot(ktd[i], label='rank by %s' % (rankModes[i]))
+    plt.title('kendall tau distance VS. time (c={})'.format(coeff))
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('kendall tau distance')
@@ -168,12 +170,12 @@ if plotPerf:
     plt.grid()
     plt.show()
 
-    # top K
+if calcPerf[2]: # top K
     fig_idx += 1
     plt.figure(fig_idx)
     for i in range(len(rankModes)):
-        plotKDT(plt, topK[i], rankModes[i])
-    plt.title("top {} percentage VS. time".format(K))
+        plt.plot(topK[i], label='rank by %s' % (rankModes[i]))
+    plt.title("top {} percentage VS. time (c={})".format(K,coeff))
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel("top {} percentage".format(K))
@@ -186,4 +188,21 @@ if plotPerf:
 
 if plotHistory:
     fig_idx += 1
-    fig_idx = plotEvalHistory(fig_idx, platform, evalHistory, num_item)
+    plt.figure(fig_idx)
+    plt.imshow(evalHistory, cmap=plt.cm.Blues, interpolation='nearest')
+    plt.title('Individual Evaluation History')
+    plt.minorticks_on()
+    plt.xlabel('user')
+    plt.ylabel('item')
+    plt.tick_params(labelright='on')
+    plt.yticks(
+        range(0, num_item), [
+            str(i) + "(" + str(int(itm.getQuality() * 100) / 100) + ")"
+            for i, itm in enumerate(platform.items.values())
+        ],
+        fontsize=6)
+    plt.colorbar(orientation='horizontal')
+    plt.show()
+
+t_plt = time.time()
+print("-----Plotting takes {:.4f}s".format(t_plt - t_done))
