@@ -42,7 +42,7 @@ class Platform(object):
         self.viewProb = .97**(np.arange(self.num_item) + 1)
         self.viewProb = self.viewProb / np.sum(self.viewProb)
 
-    def rankItems(self, mode='random', t=0):
+    def rankItems(self, mode='random', c=1, t=0):
         # Rank items with given mode of ranking policies from
         # ['random', 'quality', 'ucb', 'lcb', 'upvotes', 'views']
         if mode == 'random':
@@ -56,10 +56,10 @@ class Platform(object):
             ratio = np.true_divide(self.items[2], self.items[1])
             ranking = np.argsort(-ratio)
         elif mode == 'lcb':
-            lower = confidenceBound(self.items, self.num_user)[0]
+            lower = confidenceBound(self.items, self.num_user,c)[0]
             ranking = np.argsort(-lower)
         elif mode == 'ucb':
-            upper = confidenceBound(self.items, self.num_user)[1]
+            upper = confidenceBound(self.items, self.num_user,c)[1]
             ranking = np.argsort(-upper)
         else:
             raise Exception("Unexpected rank mode")
@@ -79,11 +79,13 @@ class Platform(object):
             rankMode='random',
             viewMode='first',
             evalMethod='upvote_only',
+            c = 1,
+            perf = [True,True,True],
             perfmeasK=10):
         # Run a simulation with given mode of viewing policies from
         # ['first', 'position']
         # Initialization
-        self.rankItems(mode=rankMode)
+        self.rankItems(mode=rankMode,c=c)
         self.placeItems(mode='all')
         # Ranking in descending quality order
         desq_rank = np.argsort(-self.items[0])
@@ -115,40 +117,46 @@ class Platform(object):
                     self.items[3, iid] += 1
 
             ########
-            # first 500 runs random to get initial data
+            # first few runs random to get initial data
             if uid < 0:
-                self.rankItems(mode='random')
+                self.rankItems(mode='random',c=c)
             else:
-                self.rankItems(mode=rankMode, t=uid + 1)
+                self.rankItems(mode=rankMode, c=c, t=uid + 1)
             ########
             self.placeItems(mode='all')
 
             time = uid + 1
-            # Happiness
-            sum_upvotes = np.sum(self.items[2])
-            upvotes_t = sum_upvotes / (time + 1 * self.num_item)
-            happy = upvotes_t
-            # Kendall Tau Distance
-            if rankMode == "random":
-                # Reorder the final list in #votes order if ranking strategy is random -> Ranking in descending upvotes order
-                ratio = np.true_divide(self.items[2], self.items[1])
-                final_rank = np.argsort(-ratio)
-            else:
-                final_rank = self.itemRanking
-            # Calculate the Kendall tau distance
-            tau, p_value = stats.kendalltau(desq_rank, final_rank)
-            # Top K Percentage
-            actual_top_K = final_rank[0:perfmeasK]
-            in_top_K = set(expected_top_K).intersection(actual_top_K)
-            topK = len(in_top_K) / perfmeasK
-            perfmea = {'ktd': tau, 'topK': topK, 'happy': happy}
+            perfmea = dict()
+            if perf[0]:
+                # Happiness
+                sum_upvotes = np.sum(self.items[2])
+                upvotes_t = sum_upvotes / (time + 1 * self.num_item)
+                happy = upvotes_t
+                perfmea['happy'] = happy
+            if perf[1]:
+                # Kendall Tau Distance
+                if rankMode == "random":
+                    # Reorder the final list in ratio of upvotes order if ranking strategy is random
+                    ratio = np.true_divide(self.items[2], self.items[1])
+                    final_rank = np.argsort(-ratio)
+                else:
+                    final_rank = self.itemRanking
+                # Calculate the Kendall tau distance
+                tau, p_value = stats.kendalltau(desq_rank, final_rank)
+                perfmea['ktd'] = tau
+            if perf[2]:
+                # Top K Percentage
+                actual_top_K = final_rank[0:perfmeasK]
+                in_top_K = set(expected_top_K).intersection(actual_top_K)
+                topK = len(in_top_K) / perfmeasK
+                perfmea['topK'] = topK
+#            perfmea = {'ktd': tau, 'topK': topK, 'happy': happy}
             self.perfmeas.append(perfmea)
 
         return self.perfmeas
 
 
-def confidenceBound(items, T):
-    c = 1
+def confidenceBound(items, T, c=1):
     ratio = np.true_divide(items[2], items[1])
     bound = np.true_divide(np.log(T), items[1])
     bound = c * np.sqrt(bound)
