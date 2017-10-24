@@ -94,7 +94,11 @@ class Platform(object):
             # user view the first in ranking
             viewProb = np.array([1] + [0] * (self.num_item - 1))
         elif viewMode == 'position':
-            viewProb = .97**(np.arange(self.num_item)*10)
+            n_it = self.num_item
+            viewProb = np.ones((n_it,))
+            viewProb = [prob+5-i if i<5 else prob+((n_it-i)<3) for i,prob in enumerate(viewProb)]
+            viewProb = np.array(viewProb)
+#            viewProb = .97**(np.arange(self.num_item)*10)
             viewProb = viewProb / np.sum(viewProb)
         else:
             raise Exception("Unexpected view mode")
