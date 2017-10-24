@@ -1,6 +1,4 @@
 import numpy as np
-import random
-from measurements import *
 
 
 class Platform(object):
@@ -16,6 +14,7 @@ class Platform(object):
         np.ndarray evalHistory
         np.ndarray itemRanking
         np.ndarray itemPlacement
+        list perfmeas
     Function:
         rankItems()
         placeItems()
@@ -39,12 +38,10 @@ class Platform(object):
         self.itemRanking = np.zeros(self.num_item)
         self.itemPlacement = np.zeros(self.num_item)
         self.perfmeas = []
-        self.viewProb = .97**(np.arange(self.num_item) + 1)
-        self.viewProb = self.viewProb / np.sum(self.viewProb)
 
     def rankItems(self, mode='random', c=1, t=0):
         # Rank items with given mode of ranking policies from
-        # ['random', 'quality', 'ucb', 'lcb', 'upvotes', 'views']
+        # ['random', 'quality', 'views', 'popularity', 'upvotes', 'ucb', 'lcb']
         if mode == 'random':
             ranking = np.arange(self.num_item)
             np.random.shuffle(ranking)
@@ -52,14 +49,16 @@ class Platform(object):
             ranking = np.argsort(-self.items[0])
         elif mode == 'views':
             ranking = np.argsort(-self.items[1])
+        elif mode == 'popularity':
+            ranking = np.argsort(-self.items[2])
         elif mode == 'upvotes':
             ratio = np.true_divide(self.items[2], self.items[1])
             ranking = np.argsort(-ratio)
         elif mode == 'lcb':
-            lower = confidenceBound(self.items, self.num_user,c)[0]
+            lower = confidenceBound(self.items, self.num_user, c)[0]
             ranking = np.argsort(-lower)
         elif mode == 'ucb':
-            upper = confidenceBound(self.items, self.num_user,c)[1]
+            upper = confidenceBound(self.items, self.num_user, c)[1]
             ranking = np.argsort(-upper)
         else:
             raise Exception("Unexpected rank mode")
@@ -79,27 +78,31 @@ class Platform(object):
             rankMode='random',
             viewMode='first',
             evalMethod='upvote_only',
-            c = 1,
-            perf = [True,True,True],
+            c=1,
+            perf=[True, True, True],
             perfmeasK=10):
         # Run a simulation with given mode of viewing policies from
         # ['first', 'position']
         # Initialization
-        self.rankItems(mode=rankMode,c=c)
+        self.rankItems(mode=rankMode, c=c)
         self.placeItems(mode='all')
         # Ranking in descending quality order
         desq_rank = np.argsort(-self.items[0])
         expected_top_K = desq_rank[0:perfmeasK]
         # Run Start
-        for uid in range(self.num_user):
-            if viewMode == 'first':
-                # user view the first in ranking
-                iid = self.itemRanking[0]
-            else:  # viewMode == 'position'
-                # OLD: user view a single item with position bias
-                itm_place = np.random.choice(self.num_item, 1, p=self.viewProb)
-                iid = self.itemRanking[itm_place[0]]
+        if viewMode == 'first':
+            # user view the first in ranking
+            viewProb = np.array([1] + [0] * (self.num_item - 1))
+        elif viewMode == 'position':
+            viewProb = .97**(np.arange(self.num_item)*10)
+            viewProb = viewProb / np.sum(viewProb)
+        else:
+            raise Exception("Unexpected view mode")
 
+        for uid in range(self.num_user):
+
+            itm_place = np.random.choice(self.num_item, 1, p=viewProb)
+            iid = self.itemRanking[itm_place[0]]
             self.viewHistory[iid][uid] += 1
             self.items[1, iid] += 1
 
@@ -119,7 +122,7 @@ class Platform(object):
             ########
             # first few runs random to get initial data
             if uid < 0:
-                self.rankItems(mode='random',c=c)
+                self.rankItems(mode='random', c=c)
             else:
                 self.rankItems(mode=rankMode, c=c, t=uid + 1)
             ########
@@ -150,7 +153,6 @@ class Platform(object):
                 in_top_K = set(expected_top_K).intersection(actual_top_K)
                 topK = len(in_top_K) / perfmeasK
                 perfmea['topK'] = topK
-#            perfmea = {'ktd': tau, 'topK': topK, 'happy': happy}
             self.perfmeas.append(perfmea)
 
         return self.perfmeas
