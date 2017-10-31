@@ -115,14 +115,14 @@ class Platform(object):
         for uid in range(self.num_user):
             if viewMode == 'position_and_social':
                 # positional preference + social influence
-                p_pos = 0.8
+                p_pos = 0.6
                 p_soc = 1-p_pos
 #                temp_items = np.copy(self.items)
                 lower = confidenceBound(self.items, self.num_user, c=c)[0]
                 lower = lower[self.itemRanking]
                 lower = lower-min(lower)
                 lower = lower/np.sum(lower)
-                viewProb = p_pos*viewProb+p_soc*lower
+                viewProb = p_pos*popularity+p_soc*lower
                 viewProb = viewProb*(viewProb>0)
                 viewProb = viewProb / np.sum(viewProb)
                 
