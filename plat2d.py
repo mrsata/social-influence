@@ -78,10 +78,13 @@ class Platform(object):
             rankMode='random',
             viewMode='first',
             evalMethod='upvote_only',
-            c=1,
-            numFree=1,
             perf=[True, True, True],
-            perfmeasK=10):
+            perfmeasK=10,
+            numFree=1,
+            p_pos=0.5,
+            user_c=1,
+            tau=1,
+            c=1):
         # Run a simulation with given mode of viewing policies from
         # ['first', 'position']
         # Initialization
@@ -91,50 +94,29 @@ class Platform(object):
         desq_rank = np.argsort(-self.items[0])
         expected_top_K = desq_rank[0:perfmeasK]
         # Run Start
-        if viewMode == 'first':
-            # user view the first in ranking
-            viewProb = np.array([1] + [0] * (self.num_item - 1))
-        elif viewMode == 'position' or viewMode == 'position_and_social':
+        if viewMode == 'position':
             # positional preference (from CVP)
             display_rank = np.array(range(self.num_item))
-            tau = 1
-            popularity = (1/(1+display_rank))**tau
+            popularity = (1 / (1 + display_rank))**tau
             popularity = popularity / np.sum(popularity)
-            viewProb = popularity
-#            n_it = self.num_item
-#            viewProb = np.ones((n_it,))
-#            viewProb = [prob+5-i if i<5 else prob+((n_it-i)<3) for i,prob in enumerate(viewProb)]
-#            viewProb = np.array(viewProb)
-            
-#            viewProb = .97**(np.arange(self.num_item)*10)
-#            viewProb = viewProb / np.sum(viewProb)
-                                    
-        else:
-            raise Exception("Unexpected view mode")
 
         for uid in range(self.num_user):
-            if viewMode == 'position_and_social':
+
+            if viewMode == 'position':
                 # positional preference + social influence
-                p_pos = 0.6
-                p_soc = 1-p_pos
-#                temp_items = np.copy(self.items)
-                lower = confidenceBound(self.items, self.num_user, c=c)[0]
-                lower = lower[self.itemRanking]
-                lower = lower-min(lower)
-                lower = lower/np.sum(lower)
-                viewProb = p_pos*popularity+p_soc*lower
-                viewProb = viewProb*(viewProb>0)
-                viewProb = viewProb / np.sum(viewProb)
-                
-#            if uid == self.num_user-1 and rankMode == 'ucb':
-##                print ("itemranking: ", self.itemRanking)
-##                print (self.items[-1, :])
-##                print ("quality: ", self.items[0, :])
-#                print ("lcb: ", lower)
-##                print (viewProb)
-                
-            itm_place = np.random.choice(self.num_item, 1, p=viewProb)
-            iid = self.itemRanking[itm_place[0]]
+                lower = confidenceBound(self.items, self.num_user, user_c)[0]
+                lcbRank = np.argsort(-lower)
+                lcbProb = popularity[np.argsort(lcbRank)]
+                popProb = popularity[np.argsort(self.itemRanking)]
+                viewProb = p_pos * popProb + (1 - p_pos) * lcbProb
+                iid = np.random.choice(self.num_item, 1, p=viewProb)[0]
+            else:
+                iid = self.itemRanking[0]
+
+            # Debug:
+            # if uid == self.num_user - 1 and rankMode == 'ucb':
+            #     print(viewProb[self.itemRanking])
+
             self.viewHistory[iid][uid] += 1
             self.items[1, iid] += 1
 
@@ -185,7 +167,7 @@ class Platform(object):
                 in_top_K = set(expected_top_K).intersection(actual_top_K)
                 topK = len(in_top_K) / perfmeasK
                 perfmea['topK'] = topK
-#            perfmea['items']=self.items
+            # perfmea['items']=self.items
             self.perfmeas.append(perfmea)
 
         return self.perfmeas

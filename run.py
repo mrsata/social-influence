@@ -19,16 +19,19 @@ fig_idx = 0
 num_free = 1
 num_runs = 10
 num_item = 50
-num_user = 50000
+num_user = 10000
 items = {}
 users = {}
 lower, upper = 0,1  # lower and upper bound of item quality
 ability_range = range(1, 6)  # ability of 1~5
 K = 10  # number of items for performance measurement "top K in expected top K"
 rankModes = ['random', 'quality', 'upvotes', 'ucb', 'lcb', 'popularity']
-viewModes = ['first', 'position','position_and_social']
-viewMode = viewModes[2]
-coeff = 1
+viewModes = ['first', 'position']
+viewMode = viewModes[1]
+p_pos = 0.5
+user_c = 0.5
+tau = 1
+coeff = 0.5
 
 
 #********** Initilization
@@ -75,16 +78,19 @@ def initialize(seed):
 
 #********** Simulation
 def simulate(items, users, rankMode):
-#    np.random.seed(123)
+    # np.random.seed(123)
     platform = Platform(items=deepcopy(items), users=users)
     perfmeas = platform.run(
         rankMode=rankMode,
         viewMode=viewMode,
         evalMethod="upvote_only",
-        c=coeff,
-        numFree=num_free,
         perf=calcPerf,
-        perfmeasK=K)
+        perfmeasK=K,
+        numFree=num_free,
+        p_pos=p_pos,
+        user_c=user_c,
+        tau=tau,
+        c=coeff)
     return perfmeas
 
 
