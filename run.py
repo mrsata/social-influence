@@ -19,7 +19,7 @@ fig_idx = 0
 num_free = 1                    # number of free views upon initialization
 num_runs = 10                   # number of realizations
 num_item = 50                   # total number of items
-num_user = 20000                # total number of users (time)
+num_user = 100000               # total number of users (time)
 items = {}
 users = {}
 lower, upper = 0,1              # lower and upper bound of item quality
@@ -152,6 +152,28 @@ if calcPerf[2]:
     topK = np.mean(np.array(topK), axis=1)
     for i in range(len(rankModes)):
         print("Mode: {:10} top K percent: {}".format(rankModes[i], topK[i][-1]))
+
+# time to converge
+        
+std_perf = happy[1,:] #quality
+diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
+num_consec = 50
+diff = diff<1e-5
+conv = np.array([sum(diff[i:i+num_consec]) for i,di in enumerate(diff)]) == num_consec
+conv_idx =  np.where(conv)[0][0]
+conv_val = std_perf[conv_idx]
+
+tol = 0.005
+print ("Convergenence")
+for i_rm,rm in enumerate(rankModes[2:]):
+    diff_conv = np.abs(happy[i_rm+2,:]-conv_val) < tol
+    cont_conv = np.array([sum(diff_conv[i:i+10]) for i,di in enumerate(diff_conv)]) == 10
+    if sum(cont_conv)>0: 
+        conv_time =  np.where(cont_conv)[0][0] 
+    else:
+        conv_time = float("inf")
+    print (rm, 'converge time: ', conv_time)
+
 
 #********** Plotting
 if calcPerf[0]:  # user happiness
