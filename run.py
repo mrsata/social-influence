@@ -11,27 +11,30 @@ from item import Item
 from user import User
 from plat2d import Platform
 
-rdm_quality = False  # assign item quality randomly
-calcPerf = [True, False, False]  # calculate performance (happiness,distance,topK)
-plotQuality = False  # plot item quality
-plotHistory = False  # plot rating history
+rdm_quality = False             # assign item quality randomly
+calcPerf = [True, False, False] # calculate performance (happiness,distance,topK)
+plotQuality = False             # plot item quality
+plotHistory = False             # plot rating history
 fig_idx = 0
-num_free = 1
-num_runs = 10
-num_item = 50
-num_user = 10000
+num_free = 1                    # number of free views upon initialization
+num_runs = 10                   # number of realizations
+num_item = 50                   # total number of items
+num_user = 20000                # total number of users (time)
 items = {}
 users = {}
-lower, upper = 0,1  # lower and upper bound of item quality
-ability_range = range(1, 6)  # ability of 1~5
-K = 10  # number of items for performance measurement "top K in expected top K"
-rankModes = ['random', 'quality', 'upvotes', 'ucb', 'lcb', 'popularity']
+lower, upper = 0,1              # lower and upper bound of item quality
+mu, sigma = 0.5, 0.3            # mean and standard deviation of item quality
+ability_range = range(1, 6)     # ability of 1~5
+K = 10                          # number of items for "top K in expected top K"
+rankModes = ['random', 'quality', 'upvotes', 'ucb', 'lcb']
 viewModes = ['first', 'position']
-viewMode = viewModes[1]
-p_pos = 0.5
-user_c = 0.5
-tau = 1
-coeff = 0.5
+viewMode = viewModes[1]         # how platform displays items to users
+n_showed = 20                   # number of items displayed by the platform
+p_pos = 1                       # ratio of positional preference in user's choice
+                                # p_pos=1 has only positional prefernece
+user_c = 0.5                    # coeff of user's lcb
+tau = 1                         # power of positional prefernece
+coeff = 0.5                     # coeff of platform's ucb/lcb
 
 
 #********** Initilization
@@ -42,7 +45,6 @@ def initialize(seed):
 
     #***** Initialization of items
     if not rdm_quality:  # assume item qualities follow a normal distribution between 0~1
-        mu, sigma = 0.5, 0.3  # mean and standard deviation of item quality
         a, b = (lower - mu) / sigma, (upper - mu) / sigma
         qualities = stats.truncnorm(
             a, b, loc=mu, scale=sigma).rvs(size=num_item)
@@ -87,6 +89,7 @@ def simulate(items, users, rankMode):
         perf=calcPerf,
         perfmeasK=K,
         numFree=num_free,
+        n_showed=n_showed,
         p_pos=p_pos,
         user_c=user_c,
         tau=tau,
@@ -178,7 +181,7 @@ if calcPerf[1]:  # distance
     plt.ylabel('kendall tau distance')
     y_lb = np.min(ktd)
     y_lb = np.floor(y_lb * 10) / 10
-    plt.ylim([y_lb, 1.1])
+    plt.ylim([y_lb, 1])
     plt.legend()
     plt.grid()
     plt.show()
@@ -194,7 +197,7 @@ if calcPerf[2]:  # top K
     plt.ylabel("top {} percentage".format(K))
     y_lb = np.min(topK)
     y_lb = np.floor(y_lb * 10) / 10
-    plt.ylim([y_lb, 1.1])
+    plt.ylim([y_lb, 1])
     plt.legend()
     plt.grid()
     plt.show()

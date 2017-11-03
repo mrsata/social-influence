@@ -81,7 +81,8 @@ class Platform(object):
             perf=[True, True, True],
             perfmeasK=10,
             numFree=1,
-            p_pos=0.5,
+            n_showed=-1,
+            p_pos=1,
             user_c=1,
             tau=1,
             c=1):
@@ -96,27 +97,32 @@ class Platform(object):
         # Run Start
         if viewMode == 'position':
             # positional preference (from CVP)
-            display_rank = np.array(range(self.num_item))
+            if n_showed == -1:
+                num_showed = self.num_item
+            else:
+                num_showed = n_showed
+            display_rank = np.array(range(num_showed))
             popularity = (1 / (1 + display_rank))**tau
             popularity = popularity / np.sum(popularity)
+            viewProb = popularity
 
         for uid in range(self.num_user):
-
             if viewMode == 'position':
-                # positional preference + social influence
-                lower = confidenceBound(self.items, self.num_user, user_c)[0]
-                lcbRank = np.argsort(-lower)
-                lcbProb = popularity[np.argsort(lcbRank)]
-                popProb = popularity[np.argsort(self.itemRanking)]
-                viewProb = p_pos * popProb + (1 - p_pos) * lcbProb
-                iid = np.random.choice(self.num_item, 1, p=viewProb)[0]
+                if p_pos < 1: # +social influence
+                    lower = confidenceBound(self.items, self.num_user, c=user_c)[0]
+                    lower = lower[self.itemRanking]
+                    lower = lower-min(lower)
+                    lower = lower/np.sum(lower)
+                    lower = lower[0:num_showed]
+                    viewProb = p_pos*popularity + (1-p_pos)*lower
+                    viewProb = viewProb*(viewProb>0)
+                    viewProb = viewProb / np.sum(viewProb)
+                    
+                itm_place = np.random.choice(num_showed, 1, p=viewProb)[0]
+                iid = self.itemRanking[itm_place]
             else:
                 iid = self.itemRanking[0]
-
-            # Debug:
-            # if uid == self.num_user - 1 and rankMode == 'ucb':
-            #     print(viewProb[self.itemRanking])
-
+                
             self.viewHistory[iid][uid] += 1
             self.items[1, iid] += 1
 
