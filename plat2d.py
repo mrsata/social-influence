@@ -39,7 +39,7 @@ class Platform(object):
         self.itemPlacement = np.zeros(self.num_item)
         self.perfmeas = []
 
-    def rankItems(self, mode='random', c=1, t=0):
+    def rankItems(self, mode='random', c=1):
         # Rank items with given mode of ranking policies from
         # ['random', 'quality', 'views', 'popularity', 'upvotes', 'ucb', 'lcb']
         if mode == 'random':
@@ -101,28 +101,23 @@ class Platform(object):
                 num_showed = self.num_item
             else:
                 num_showed = n_showed
-            display_rank = np.array(range(num_showed))
+            display_rank = np.arange(num_showed)
             popularity = (1 / (1 + display_rank))**tau
             popularity = popularity / np.sum(popularity)
-            viewProb = popularity
 
         for uid in range(self.num_user):
             if viewMode == 'position':
-                if p_pos < 1: # +social influence
-                    lower = confidenceBound(self.items, self.num_user, c=user_c)[0]
-                    lower = lower[self.itemRanking]
-                    lower = lower-min(lower)
-                    lower = lower/np.sum(lower)
-                    lower = lower[0:num_showed]
-                    viewProb = p_pos*popularity + (1-p_pos)*lower
-                    viewProb = viewProb*(viewProb>0)
-                    viewProb = viewProb / np.sum(viewProb)
-                    
-                itm_place = np.random.choice(num_showed, 1, p=viewProb)[0]
-                iid = self.itemRanking[itm_place]
+                lower = confidenceBound(self.items, self.num_user, user_c)[0]
+                lcbRank = np.argsort(-lower)
+                lcbMask = np.argsort(lcbRank)[:num_showed]
+                popMask = np.argsort(self.itemRanking)[:num_showed]
+                viewProb = np.zeros((self.num_item,))
+                viewProb[lcbMask] += p_pos * popularity
+                viewProb[popMask] += (1 - p_pos) * popularity
+                iid = np.random.choice(self.num_item, 1, p=viewProb)[0]
             else:
                 iid = self.itemRanking[0]
-                
+
             self.viewHistory[iid][uid] += 1
             self.items[1, iid] += 1
 
@@ -144,7 +139,7 @@ class Platform(object):
             if uid < 0:
                 self.rankItems(mode='random', c=c)
             else:
-                self.rankItems(mode=rankMode, c=c, t=uid + 1)
+                self.rankItems(mode=rankMode, c=c)
             ########
             self.placeItems(mode='all')
 
@@ -177,6 +172,69 @@ class Platform(object):
             self.perfmeas.append(perfmea)
 
         return self.perfmeas
+
+    def step(self,
+             uid,
+             rankMode='random',
+             viewMode='first',
+             evalMethod='upvote_only',
+             numFree=1,
+             n_showed=-1,
+             p_pos=1,
+             user_c=1,
+             tau=1,
+             c=1):
+        # Run a step of simulation with given mode of viewing policies from
+        # ['first', 'position']
+        # Initialization
+        self.rankItems(mode=rankMode, c=c)
+        self.placeItems(mode='all')
+
+        # Run Start
+        if viewMode == 'position':
+            # positional preference (from CVP)
+            if n_showed == -1:
+                num_showed = self.num_item
+            else:
+                num_showed = n_showed
+            display_rank = np.arange(num_showed)
+            popularity = (1 / (1 + display_rank))**tau
+            popularity = popularity / np.sum(popularity)
+
+        if viewMode == 'position':
+            lower = confidenceBound(self.items, self.num_user, user_c)[0]
+            lcbRank = np.argsort(-lower)
+            lcbMask = np.argsort(lcbRank)[:num_showed]
+            popMask = np.argsort(self.itemRanking)[:num_showed]
+            viewProb = np.zeros((self.num_item,))
+            viewProb[lcbMask] += p_pos * popularity
+            viewProb[popMask] += (1 - p_pos) * popularity
+            iid = np.random.choice(self.num_item, 1, p=viewProb)[0]
+        else:
+            iid = self.itemRanking[0]
+
+        self.viewHistory[iid][uid] += 1
+        self.items[1, iid] += 1
+
+        if evalMethod == "abs_quality":
+            evaluation = self.items[0, iid]
+        elif evalMethod == "rel_quality":
+            evaluation = self.items[0, iid] + np.random.normal(0, 0.1)
+        else:  # "upvote_only":
+            evaluation = 1 if np.random.rand() < self.items[0, iid] else -1
+        if evaluation:
+            self.evalHistory[iid][uid] = evaluation
+            if evaluation > 0:
+                self.items[2, iid] += 1
+            else:
+                self.items[3, iid] += 1
+
+        # Happiness
+        time = uid + 1
+        sum_upvotes = np.sum(self.items[2])
+        upvotes_t = sum_upvotes / (time + numFree * self.num_item)
+
+        return upvotes_t
 
 
 def confidenceBound(items, T, c=1):

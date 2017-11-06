@@ -20,9 +20,7 @@ num_free = 1                    # number of free views upon initialization
 num_runs = 10                   # number of realizations
 num_item = 50                   # total number of items
 num_user = 100000               # total number of users (time)
-items = {}
-users = {}
-lower, upper = 0,1              # lower and upper bound of item quality
+lower, upper = 0, 1             # lower and upper bound of item quality
 mu, sigma = 0.5, 0.3            # mean and standard deviation of item quality
 ability_range = range(1, 6)     # ability of 1~5
 K = 10                          # number of items for "top K in expected top K"
@@ -30,7 +28,7 @@ rankModes = ['random', 'quality', 'upvotes', 'ucb', 'lcb']
 viewModes = ['first', 'position']
 viewMode = viewModes[1]         # how platform displays items to users
 n_showed = 20                   # number of items displayed by the platform
-p_pos = 1                       # ratio of positional preference in user's choice
+p_pos = 0.5                     # ratio of positional preference in user's choice
                                 # p_pos=1 has only positional prefernece
 user_c = 0.5                    # coeff of user's lcb
 tau = 1                         # power of positional prefernece
@@ -42,6 +40,8 @@ def initialize(seed):
 
     random.seed(seed)
     np.random.seed(seed)
+    items = {}
+    users = {}
 
     #***** Initialization of items
     if not rdm_quality:  # assume item qualities follow a normal distribution between 0~1
@@ -154,7 +154,7 @@ if calcPerf[2]:
         print("Mode: {:10} top K percent: {}".format(rankModes[i], topK[i][-1]))
 
 # time to converge
-        
+''' Nov 6 4:55PM Han: Hasn't try this yet
 std_perf = happy[1,:] #quality
 diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
 num_consec = 50
@@ -168,12 +168,12 @@ print ("Convergenence")
 for i_rm,rm in enumerate(rankModes[2:]):
     diff_conv = np.abs(happy[i_rm+2,:]-conv_val) < tol
     cont_conv = np.array([sum(diff_conv[i:i+10]) for i,di in enumerate(diff_conv)]) == 10
-    if sum(cont_conv)>0: 
-        conv_time =  np.where(cont_conv)[0][0] 
+    if sum(cont_conv)>0:
+        conv_time =  np.where(cont_conv)[0][0]
     else:
         conv_time = float("inf")
     print (rm, 'converge time: ', conv_time)
-
+'''
 
 #********** Plotting
 if calcPerf[0]:  # user happiness
