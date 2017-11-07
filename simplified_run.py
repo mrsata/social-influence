@@ -15,7 +15,7 @@ rdm_quality = False             # assign item quality randomly
 calcPerf = [True, False, False] # calculate performance (happiness,distance,topK)
 plotQuality = False             # plot item quality
 plotHistory = False             # plot rating history
-fig_idx = 0
+fig_idx = 0 
 num_free = 1                    # number of free views upon initialization
 num_runs = 10                   # number of realizations
 num_item = 50                   # total number of items
@@ -26,7 +26,7 @@ lower, upper = 0,1              # lower and upper bound of item quality
 mu, sigma = 0.5, 0.3            # mean and standard deviation of item quality
 ability_range = range(1, 6)     # ability of 1~5
 K = 10                          # number of items for "top K in expected top K"
-rankModes = ['random', 'quality', 'upvotes', 'ucb', 'lcb']
+rankModes = ['quality', 'ucb']
 viewModes = ['first', 'position']
 viewMode = viewModes[1]         # how platform displays items to users
 n_showed = 20                   # number of items displayed by the platform
@@ -35,6 +35,7 @@ p_pos = 1                       # ratio of positional preference in user's choic
 user_c = 0.5                    # coeff of user's lcb
 tau = 1                         # power of positional prefernece
 coeff = 0.5                     # coeff of platform's ucb/lcb
+tol = 0.01                      # tolerance for convergence
 
 
 #********** Initilization
@@ -102,6 +103,8 @@ pool = mp.Pool()
 t0 = time.time()
 print("-----Start\nnum_runs: {}\nnum_item: {}\nnum_user: {}".format(
     num_runs, num_item, num_user))
+print("c: {}\ntau: {}\np_pos: {}\ntol: {}\nn_showed: {}".format(
+    coeff, tau, p_pos, tol, n_showed))
 
 # Initialize
 seeds = range(num_runs)
@@ -155,7 +158,7 @@ if calcPerf[2]:
 
 # time to converge
         
-std_perf = happy[1,:] #quality
+std_perf = happy[0,:] #quality
 diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
 num_consec = 50
 diff = diff<1e-5
@@ -163,16 +166,17 @@ conv = np.array([sum(diff[i:i+num_consec]) for i,di in enumerate(diff)]) == num_
 conv_idx =  np.where(conv)[0][0]
 conv_val = std_perf[conv_idx]
 
-tol = 0.005
 print ("Convergenence")
-for i_rm,rm in enumerate(rankModes[2:]):
-    diff_conv = np.abs(happy[i_rm+2,:]-conv_val) < tol
-    cont_conv = np.array([sum(diff_conv[i:i+10]) for i,di in enumerate(diff_conv)]) == 10
-    if sum(cont_conv)>0: 
-        conv_time =  np.where(cont_conv)[0][0] 
-    else:
-        conv_time = float("inf")
-    print (rm, 'converge time: ', conv_time)
+diff_conv = np.abs(happy[1,:]-conv_val) < tol
+cont_conv = np.array([sum(diff_conv[i:i+10]) for i,di in enumerate(diff_conv)]) == 10
+if sum(cont_conv)>0: 
+    conv_time =  np.where(cont_conv)[0][0]
+    final_diff = happy[0,conv_time]-happy[1,conv_time]
+else:
+    conv_time = float("inf")
+    final_diff = happy[0,-1]-happy[1,-1]
+print (rankModes[1], 'converge time: ', conv_time)
+print (rankModes[1], 'final difference: ', final_diff)
 
 
 #********** Plotting

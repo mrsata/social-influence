@@ -3,9 +3,7 @@ import numpy as np
 
 class Platform(object):
     """Abstract base class for the platform in 2d dimension
-
     A platform is an environment where users interacts with items.
-
     Property:
         int num_item
         int num_user
@@ -19,7 +17,6 @@ class Platform(object):
         rankItems()
         placeItems()
         run()
-
     """
 
     def __init__(self, items, users):
@@ -39,7 +36,7 @@ class Platform(object):
         self.itemPlacement = np.zeros(self.num_item)
         self.perfmeas = []
 
-    def rankItems(self, mode='random', c=1):
+    def rankItems(self, mode='random', c=1, t=0):
         # Rank items with given mode of ranking policies from
         # ['random', 'quality', 'views', 'popularity', 'upvotes', 'ucb', 'lcb']
         if mode == 'random':
@@ -101,23 +98,29 @@ class Platform(object):
                 num_showed = self.num_item
             else:
                 num_showed = n_showed
-            display_rank = np.arange(num_showed)
+            display_rank = np.array(range(num_showed))
             popularity = (1 / (1 + display_rank))**tau
             popularity = popularity / np.sum(popularity)
+            viewProb = popularity
 
         for uid in range(self.num_user):
             if viewMode == 'position':
-                lower = confidenceBound(self.items, self.num_user, user_c)[0]
-                lcbRank = np.argsort(-lower)
-                lcbMask = np.argsort(lcbRank)[:num_showed]
-                popMask = np.argsort(self.itemRanking)[:num_showed]
-                viewProb = np.zeros((self.num_item,))
-                viewProb[lcbMask] += p_pos * popularity
-                viewProb[popMask] += (1 - p_pos) * popularity
-                iid = np.random.choice(self.num_item, 1, p=viewProb)[0]
+                if p_pos < 1: # +social influence 
+                    # TODO: change to displayed ranking instead of direct values
+                    lower = confidenceBound(self.items, self.num_user, c=user_c)[0]
+                    lower = lower[self.itemRanking]
+                    lower = lower-min(lower)
+                    lower = lower/np.sum(lower)
+                    lower = lower[0:num_showed]
+                    viewProb = p_pos*popularity + (1-p_pos)*lower
+                    viewProb = viewProb*(viewProb>0)
+                    viewProb = viewProb / np.sum(viewProb)
+                    
+                itm_place = np.random.choice(num_showed, 1, p=viewProb)[0]
+                iid = self.itemRanking[itm_place]
             else:
                 iid = self.itemRanking[0]
-
+                
             self.viewHistory[iid][uid] += 1
             self.items[1, iid] += 1
 
@@ -139,7 +142,7 @@ class Platform(object):
             if uid < 0:
                 self.rankItems(mode='random', c=c)
             else:
-                self.rankItems(mode=rankMode, c=c)
+                self.rankItems(mode=rankMode, c=c, t=uid + 1)
             ########
             self.placeItems(mode='all')
 
