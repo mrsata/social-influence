@@ -1,6 +1,7 @@
 from __future__ import division
 from copy import deepcopy
 from itertools import repeat
+from optparse import OptionParser
 import random
 import matplotlib.pyplot as plt
 import multiprocessing as mp
@@ -11,6 +12,12 @@ import time
 from item import Item
 from user import User
 from plat2d import Platform
+
+parser = OptionParser()
+parser.add_option("-t", type="float", default=1.0, dest="tau")
+parser.add_option("-c", type="float", default=0.5, dest="c")
+options = parser.parse_args()[0]
+tau, coeff = options.tau, options.c)
 
 rdm_quality = False             # assign item quality randomly
 calcPerf = [True, False, False] # calculate performance (happiness,distance,topK)

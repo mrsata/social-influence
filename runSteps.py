@@ -12,13 +12,12 @@ from item import Item
 from user import User
 from plat2d import Platform
 
-
 rdm_quality = False  # assign item quality randomly
 plotQuality = False  # plot item quality
 num_free = 1  # number of free views upon initialization
-num_runs = 1  # number of realizations
+num_runs = 10  # number of realizations
 num_item = 50  # total number of items
-num_user = 10000  # total number of users (time)
+num_user = 100000  # total number of users (time)
 lower, upper = 0, 1  # lower and upper bound of item quality
 mu, sigma = 0.5, 0.3  # mean and standard deviation of item quality
 ability_range = range(1, 6)  # ability of 1~5
@@ -29,13 +28,14 @@ n_showed = 50  # number of items displayed by the platform
 p_pos = 0.5  # ratio of positional preference in user's choice
 # p_pos=1 has only positional prefernece
 user_c = 0.5  # coeff of user's lcb
-tau_and_cs = np.mgrid[0:2:1, 0:2:1]
+tau_and_cs = np.mgrid[0:3.1:.1, 0:3.1:.1]
 tau_and_cs = np.concatenate(
     (tau_and_cs[0][:, :, np.newaxis], tau_and_cs[1][:, :, np.newaxis]),
     axis=2).reshape(-1, 2)
-tau_and_cs = np.array(([0,0],))
-tol = 0.01
-num_consec = 50
+tol_cnvrg = 0.005
+tol_close = 0.005
+num_consec = 1000
+# tau_and_cs = np.array(([1, .5], ))
 
 
 #********** Initilization
@@ -85,15 +85,16 @@ def initialize(seed):
 def simulate(inputs):
     # np.random.seed(123)
     items, users, tau_and_c = inputs
-    print('start', tau_and_c)
     tau, c = tau_and_c
     platform1 = Platform(items=deepcopy(items), users=users)
     platform2 = Platform(items=deepcopy(items), users=users)
-    happys1, happys2, diff, diff_quality = [], [], [], []
+    happys1 = np.zeros(num_consec)
+    happys2 = np.zeros(num_consec)
     step = 0
     while step < num_user:
-        if step % 500 == 0:
-            print step
+        # if step % 500 == 0:
+        # print(step)
+        happys0 = happys1
         happy1 = platform1.step(
             uid=step,
             rankMode=rankModes[0],
@@ -116,42 +117,18 @@ def simulate(inputs):
             user_c=user_c,
             tau=tau,
             c=c)
-        happys1.append(happy1)
-        happys2.append(happy2)
-        if step > 1:
-            diff.append(happys1[-1] - happys1[-2])
-            diff_quality.append(abs(diff[-1]) < 1e-2)
-        if len(happys1) > 500 and len(happys2) > 500:
-            conv = np.array([
-                sum(diff_quality[i:i + num_consec])
-                for i, di in enumerate(diff_quality)
-            ]) == num_consec
-            conv_idx = np.where(conv)[0]
-            if len(conv_idx) > 0:  # quality converges
-                conv_val = happys1[conv_idx[0]]
-                diff_conv = np.abs(happys2 - conv_val) < tol
-                cont_conv = np.array([
-                    sum(diff_conv[i:i + 10]) for i, di in enumerate(diff_conv)
-                ]) == 10
-                if sum(cont_conv) > 0:
-                    print(tau, c, step, happys1[-1], happys2[-1])
-                    return tau, c, step, happys1, happys2
-#                    conv_time =  np.where(cont_conv)[0][0]
-#                else:
-#                    conv_time = float("inf")
-#                    print (rm, 'converge time: ', conv_time)
-#            happys1 = happys1[-500:]
-#            happys2 = happys2[-500:]
-#        if step > 1000 and sum(
-#            [happys1[-i] < happys2[-i] + tol for i in range(1, 501)]) == 500:
-#            print(tau, c, step - 499, happys1[-1], happys2[-1])
-##            return tau, c, step - 499, happys1[-500], happys2[-500]
-#            return tau, c, step, happys1, happys2
-
+        happys1[step % num_consec] = happy1
+        happys2[step % num_consec] = happy2
+        converge = np.all(
+            np.abs(happys1 - happys0[np.arange(num_consec) - 1]) < tol_cnvrg)
+        close = np.all(np.abs(happy1 - happy2) < tol_close)
+        if converge and close:
+            # quality converges and difference < tolerance
+            print(tau, c, step, happy1, happy2)
+            return tau, c, step, happy1, happy2
         step += 1
-    print(tau, c, step, happys1[-1], happys2[-1])
-    #    return tau, c, step, happys1[-1], happys2[-1]
-    return tau, c, step, happys1, happys2
+    print(tau, c, step, happy1, happy2)
+    return tau, c, step, happy1, happy2
 
 
 #********** Start
@@ -176,16 +153,21 @@ print("tau", "c", "step", rankModes[0], rankModes[1])
 # Simulate
 results = []
 for i in range(len(tau_and_cs)):
-    result = pool.map_async(simulate,
-                                zip(items, users, repeat(tau_and_cs[i])))
+    result = pool.map_async(simulate, zip(items, users, repeat(tau_and_cs[i])))
     results.append(result)
 
 # Output
 for result in results:
-    happy = result.get()
-    print(happy)
-    # with open('#TODO', 'a') as f:
-    #     f.write()
+    happys = result.get()
+    tau, c = happys[0][0], happys[0][1]
+    with open('outputs/output_tau{}_c{}'.format(tau, c), 'w') as f:
+        for happy in happys:
+            f.write(', '.join(map(str, happy)) + '\n')
+    happys = np.array(happys)
+    with open('outputs/output_all_mean', 'a') as f:
+        f.write(', '.join(map(str, np.mean(happys, axis=0))) + '\n')
+    with open('outputs/output_all_median', 'a') as f:
+        f.write(', '.join(map(str, np.median(happys, axis=0))) + '\n')
 
 t_done = time.time()
 print("-----Simulation takes {:.4f}s".format(t_done - t_ini))
