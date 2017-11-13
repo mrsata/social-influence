@@ -1,3 +1,4 @@
+from __future__ import division
 from copy import deepcopy
 from itertools import repeat
 import random
@@ -19,10 +20,8 @@ fig_idx = 0
 num_free = 1                    # number of free views upon initialization
 num_runs = 10                   # number of realizations
 num_item = 50                   # total number of items
-num_user = 50000               # total number of users (time)
-items = {}
-users = {}
-lower, upper = 0,1              # lower and upper bound of item quality
+num_user = 10000               # total number of users (time)
+lower, upper = 0, 1             # lower and upper bound of item quality
 mu, sigma = 0.5, 0.3            # mean and standard deviation of item quality
 ability_range = range(1, 6)     # ability of 1~5
 K = 10                          # number of items for "top K in expected top K"
@@ -36,12 +35,13 @@ user_c = 0.5                    # coeff of user's lcb
 tau = 1                         # power of positional prefernece
 coeff = 0.5                     # coeff of platform's ucb/lcb
 
-
 #********** Initilization
 def initialize(seed):
 
     random.seed(seed)
     np.random.seed(seed)
+    items = {}
+    users = {}
 
     #***** Initialization of items
     if not rdm_quality:  # assume item qualities follow a normal distribution between 0~1
@@ -79,8 +79,9 @@ def initialize(seed):
 
 
 #********** Simulation
-def simulate(items, users, rankMode):
+def simulate(inputs):
     # np.random.seed(123)
+    items, users, rankMode = inputs
     platform = Platform(items=deepcopy(items), users=users)
     perfmeas = platform.run(
         rankMode=rankMode,
@@ -118,8 +119,7 @@ print("-----Initialization takes {:.4f}s".format(t_ini - t0))
 # Simulate
 results = []
 for i in range(len(rankModes)):
-    result = pool.starmap_async(simulate,
-                                zip(items, users, repeat(rankModes[i])))
+    result = pool.map_async(simulate, zip(items, users, repeat(rankModes[i])))
     results.append(result)
 
 #perfmeas = map(lambda x: x.get(), results)
@@ -151,29 +151,30 @@ if calcPerf[2]:
     topK = [list(map(lambda x: [pf['topK'] for pf in x], p)) for p in perfmeas]
     topK = np.mean(np.array(topK), axis=1)
     for i in range(len(rankModes)):
-        print("Mode: {:10} top K percent: {}".format(rankModes[i], topK[i][-1]))
+        print(
+            "Mode: {:10} top K percent: {}".format(rankModes[i], topK[i][-1]))
 
 # time to converge
-        
-std_perf = happy[1,:] #quality
+std_perf = happy[1, :]  #quality
 diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
 num_consec = 50
-diff = diff<1e-5
-conv = np.array([sum(diff[i:i+num_consec]) for i,di in enumerate(diff)]) == num_consec
-conv_idx =  np.where(conv)[0][0]
+diff = diff < 1e-5
+conv = np.array([sum(diff[i:i + num_consec])
+                 for i, di in enumerate(diff)]) == num_consec
+conv_idx = np.where(conv)[0][0]
 conv_val = std_perf[conv_idx]
 
 tol = 0.005
-print ("Convergenence")
-for i_rm,rm in enumerate(rankModes[2:]):
-    diff_conv = np.abs(happy[i_rm+2,:]-conv_val) < tol
-    cont_conv = np.array([sum(diff_conv[i:i+10]) for i,di in enumerate(diff_conv)]) == 10
-    if sum(cont_conv)>0: 
-        conv_time =  np.where(cont_conv)[0][0] 
+print("Convergenence")
+for i_rm, rm in enumerate(rankModes[2:]):
+    diff_conv = np.abs(happy[i_rm + 2, :] - conv_val) < tol
+    cont_conv = np.array(
+        [sum(diff_conv[i:i + 10]) for i, di in enumerate(diff_conv)]) == 10
+    if sum(cont_conv) > 0:
+        conv_time = np.where(cont_conv)[0][0]
     else:
         conv_time = float("inf")
-    print (rm, 'converge time: ', conv_time)
-
+    print(rm, 'converge time: ', conv_time)
 
 #********** Plotting
 if calcPerf[0]:  # user happiness
