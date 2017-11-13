@@ -102,3 +102,6 @@ ENV/
 
 # test data
 outputs/
+
+# pycharm
+.idea/
