@@ -17,7 +17,7 @@ plotQuality = False             # plot item quality
 plotHistory = False             # plot rating history
 fig_idx = 0 
 num_free = 1                    # number of free views upon initialization
-num_runs = 10                   # number of realizations
+num_runs = 1                   # number of realizations
 num_item = 50                   # total number of items
 num_user = 50000               # total number of users (time)
 items = {}
@@ -29,7 +29,7 @@ K = 10                          # number of items for "top K in expected top K"
 rankModes = ['quality', 'ucb']
 viewModes = ['first', 'position']
 viewMode = viewModes[1]         # how platform displays items to users
-n_showed = 20                   # number of items displayed by the platform
+n_showed = 0.1                   # number of items displayed by the platform
 p_pos = 1                       # ratio of positional preference in user's choice
                                 # p_pos=1 has only positional prefernece
 user_c = 0.5                    # coeff of user's lcb
@@ -158,25 +158,25 @@ if calcPerf[2]:
 
 # time to converge
         
-std_perf = happy[0,:] #quality
-diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
-num_consec = 50
-diff = diff<1e-5
-conv = np.array([sum(diff[i:i+num_consec]) for i,di in enumerate(diff)]) == num_consec
-conv_idx =  np.where(conv)[0][0]
-conv_val = std_perf[conv_idx]
-
-print ("Convergenence")
-diff_conv = np.abs(happy[1,:]-conv_val) < tol
-cont_conv = np.array([sum(diff_conv[i:i+10]) for i,di in enumerate(diff_conv)]) == 10
-if sum(cont_conv)>0: 
-    conv_time =  np.where(cont_conv)[0][0]
-    final_diff = happy[0,conv_time]-happy[1,conv_time]
-else:
-    conv_time = float("inf")
-    final_diff = happy[0,-1]-happy[1,-1]
-print (rankModes[1], 'converge time: ', conv_time)
-print (rankModes[1], 'final difference: ', final_diff)
+#std_perf = happy[0,:] #quality
+#diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
+#num_consec = 50
+#diff = diff<1e-5
+#conv = np.array([sum(diff[i:i+num_consec]) for i,di in enumerate(diff)]) == num_consec
+#conv_idx =  np.where(conv)[0][0]
+#conv_val = std_perf[conv_idx]
+#
+#print ("Convergenence")
+#diff_conv = np.abs(happy[1,:]-conv_val) < tol
+#cont_conv = np.array([sum(diff_conv[i:i+10]) for i,di in enumerate(diff_conv)]) == 10
+#if sum(cont_conv)>0: 
+#    conv_time =  np.where(cont_conv)[0][0]
+#    final_diff = happy[0,conv_time]-happy[1,conv_time]
+#else:
+#    conv_time = float("inf")
+#    final_diff = happy[0,-1]-happy[1,-1]
+#print (rankModes[1], 'converge time: ', conv_time)
+#print (rankModes[1], 'final difference: ', final_diff)
 
 
 #********** Plotting

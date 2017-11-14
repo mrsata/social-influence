@@ -21,21 +21,26 @@ ability_range = range(1, 6)  # ability of 1~5
 rankModes = ['quality', 'ucb']
 viewModes = ['first', 'position']
 viewMode = viewModes[1]  # how platform displays items to users
-n_showed = 50  # number of items displayed by the platform
+n_showed = 0.1  # portion of items displayed by the platform
 p_pos = 1  # ratio of positional preference in user's choice
 # p_pos=1 has only positional prefernece
 user_c = 0.5  # coeff of user's lcb
-tau_and_cs = np.mgrid[0:5.1:1, 0:3.1:0.25]
-tau_and_cs = np.concatenate(
-    (tau_and_cs[0][:, :, np.newaxis], tau_and_cs[1][:, :, np.newaxis]),
-    axis=2).reshape(-1, 2)
+parameters = ['tau','c','n_showed']
+paras = [parameters[1],parameters[2]]
+para_ranges = []
+for i in range(2):
+    if paras[i]=='tau':
+        para_ranges.append(np.linspace(0,2,3))
+    elif paras[i]=='c':
+        para_ranges.append(np.linspace(0,2,9))
+    elif paras[i]=='n_showed':
+        para_ranges.append(np.linspace(0.1,1,10))
+mesh1,mesh2 = np.meshgrid(para_ranges[0], para_ranges[1])
+paras_grid = np.dstack(
+    (mesh1,mesh2)).reshape(-1, 2)
 tol_cnvrg = 0.005
 tol_close = 0.005
 num_consec = 1000
-# tau_and_cs = np.array(([1, .5], ))
-with open('outputs/test.txt', 'w') as f:
-    f.write("Start")
-    
 
 
 #********** Initilization
@@ -82,20 +87,24 @@ def initialize(seed):
 
 
 #********** Simulation
-def simulate(its, urs, tau_and_c):
+def simulate(its, urs, paras, para_i):
     # np.random.seed(123)
     items = its
     users = urs
-#    items, users, tau_and_c = inputs
-    tau, c = tau_and_c
+    if ('tau' in paras) and ('c' in paras):
+        tau, c = para_i
+        n_showed = 1
+    elif ('c' in paras) and ('n_showed' in paras):
+        c, n_showed = para_i
+        tau = 1
+    else:
+        tau, c, n_showed = 1, 1, 1
     platform1 = Platform(items=deepcopy(items), users=users)
     platform2 = Platform(items=deepcopy(items), users=users)
     happys1 = np.zeros(num_consec)
     happys2 = np.zeros(num_consec)
     step = 0
     while step < num_user:
-        # if step % 500 == 0:
-        # print(step)
         happys0 = happys1
         happy1 = platform1.step(
             uid=step,
@@ -126,11 +135,11 @@ def simulate(its, urs, tau_and_c):
         close = np.all(np.abs(happy1 - happy2) < tol_close)
         if converge and close:
             # quality converges and difference < tolerance
-            print(tau, c, step, happy1, happy2)
-            return tau, c, step, happy1, happy2
+            print(para_i[0], para_i[1], step, happy1, happy2)
+            return para_i[0], para_i[1], step, happy1, happy2
         step += 1
-    print(tau, c, step, happy1, happy2)
-    return tau, c, step, happy1, happy2
+    print(para_i[0], para_i[1], step, happy1, happy2)
+    return para_i[0], para_i[1], step, happy1, happy2
 
 
 #********** Start
@@ -140,8 +149,6 @@ print("-----Start\nnum_runs: {0}\nnum_item: {1}\nnum_user: {2}".format(
 
 # Initialize
 seeds = range(num_runs)
-#inits = pool.map(initialize, seeds)
-#items, users = zip(*inits)
 items = []
 users = []
 for i in range(len(seeds)):
@@ -153,31 +160,30 @@ items, users = zip(*zipped)
 for i in range(len(seeds)):
     qualities = [itm.getQuality() for itm in items[i].values()]
     mean_quality = np.mean(qualities)
-    # print("Seed: {:2}   mean: {}".format(seeds[i], mean_quality))
 
 t_ini = time.time()
 print("-----Initialization takes %.4fs" % (t_ini - t0))
-print("tau", "c", "step", rankModes[0], rankModes[1])
+print(paras[0], paras[1], "step", rankModes[0], rankModes[1])
 
 
 # Simulate
 results = []
-m,n = tau_and_cs.shape
+m,n = paras_grid.shape
 for i_run in range(num_runs):
     itms = items[i_run]
     usrs = users[i_run]
     result_realization = []
     for i in range(m):
-        result = simulate(itms, usrs, tau_and_cs[i])
+        result = simulate(itms, usrs, paras, paras_grid[i])
         result_realization.append(result)
     results.append(result_realization)
     
-## Output
+### Output
 results = np.array(results)
 for i in range(m):
-    tau,c = tau_and_cs[i]
-    with open('outputs/output_tau{0}_c{1}.txt'.format(tau, c), 'w') as f:
-        f.write("tau "+str(tau)+"  c "+str(c)+"  number of realizations "+str(num_runs)+"\n")
+    p1,p2 = paras_grid[i]
+    with open(('outputs/output_'+paras[0]+'{0}_'+paras[1]+'{1}.txt').format(p1, p2), 'w') as f:
+        f.write(paras[0]+" "+str(p1)+"  "+paras[1]+" "+str(p2)+"  number of realizations "+str(num_runs)+"\n")
         f.write("   #step    happiness(quality)    happiness(ucb) \n")
         f.write('\n'.join(map(str, results[:,i,2:])) + '\n')
         f.write("mean  "+str(np.mean(results[:,i,2:], axis=0))+"\n")

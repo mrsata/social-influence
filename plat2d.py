@@ -79,7 +79,7 @@ class Platform(object):
             perf=[True, True, True],
             perfmeasK=10,
             numFree=1,
-            n_showed=-1,
+            n_showed=1,
             p_pos=1,
             user_c=1,
             tau=1,
@@ -95,10 +95,11 @@ class Platform(object):
         # Run Start
         if viewMode == 'position':
             # positional preference (from CVP)
-            if n_showed == -1:
-                num_showed = self.num_item
+            if n_showed > 1 or n_showed < 0:
+                portion_showed = 1
             else:
-                num_showed = n_showed
+                portion_showed = n_showed
+            num_showed = int(self.num_item*portion_showed)
             display_rank = np.arange(num_showed)
             popularity = (1 / (1 + display_rank))**tau
             popularity = popularity / np.sum(popularity)
@@ -192,10 +193,11 @@ class Platform(object):
         # Run Start
         if viewMode == 'position':
             # positional preference (from CVP)
-            if n_showed == -1:
-                num_showed = self.num_item
+            if n_showed > 1 or n_showed < 0:
+                portion_showed = 1
             else:
-                num_showed = n_showed
+                portion_showed = n_showed
+            num_showed = int(self.num_item*portion_showed)
             display_rank = np.arange(num_showed)
             popularity = (1 / (1 + display_rank))**tau
             popularity = popularity / np.sum(popularity)
