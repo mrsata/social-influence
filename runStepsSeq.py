@@ -1,6 +1,7 @@
 from __future__ import division
 from copy import deepcopy
 from itertools import repeat
+from optparse import OptionParser
 import random
 # import matplotlib.pyplot as plt
 import multiprocessing as mp
@@ -11,6 +12,12 @@ import time
 from item import Item
 from user import User
 from plat2d import Platform
+
+parser = OptionParser()
+parser.add_option("-t", type="float", default=0.0, dest="tau")
+parser.add_option("-c", type="float", default=0.0, dest="c")
+options = parser.parse_args()[0]
+t, c = options.tau, options.c
 
 rdm_quality = False  # assign item quality randomly
 plotQuality = False  # plot item quality
@@ -28,14 +35,14 @@ n_showed = 50  # number of items displayed by the platform
 p_pos = 0.5  # ratio of positional preference in user's choice
 # p_pos=1 has only positional prefernece
 user_c = 0.5  # coeff of user's lcb
-tau_and_cs = np.mgrid[0:3.1:.1, 0:3.1:.1]
+tau_and_cs = np.mgrid[t:t+0.5:.1, c:c+3:.1]
 tau_and_cs = np.concatenate(
     (tau_and_cs[0][:, :, np.newaxis], tau_and_cs[1][:, :, np.newaxis]),
     axis=2).reshape(-1, 2)
 tol_cnvrg = 0.005
 tol_close = 0.005
 num_consec = 1000
-# tau_and_cs = np.array(([1, .5], ))
+#tau_and_cs = np.array(([1, .5], ))
 
 
 #********** Initilization
@@ -132,14 +139,15 @@ def simulate(inputs):
 
 
 #********** Start
-pool = mp.Pool()
+# pool = mp.Pool()
 t0 = time.time()
 print("-----Start\nnum_runs: {0}\nnum_item: {1}\nnum_user: {2}".format(
     num_runs, num_item, num_user))
 
 # Initialize
 seeds = range(num_runs)
-inits = pool.map(initialize, seeds)
+# inits = pool.map(initialize, seeds)
+inits = list(map(initialize, seeds))
 items, users = zip(*inits)
 for i in range(len(seeds)):
     qualities = [itm.getQuality() for itm in items[i].values()]
@@ -153,12 +161,14 @@ print("tau", "c", "step", rankModes[0], rankModes[1])
 # Simulate
 results = []
 for i in range(len(tau_and_cs)):
-    result = pool.map_async(simulate, zip(items, users, repeat(tau_and_cs[i])))
+    # result = pool.map_async(simulate, zip(items, users, repeat(tau_and_cs[i])))
+    result = list(map(simulate, zip(items, users, repeat(tau_and_cs[i]))))
     results.append(result)
 
 # Output
 for result in results:
-    happys = result.get()
+    # happys = result.get()
+    happys = result
     tau, c = happys[0][0], happys[0][1]
     with open('outputs/output_tau{0}_c{1}'.format(tau, c), 'w') as f:
         for happy in happys:
