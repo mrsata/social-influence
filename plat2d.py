@@ -211,10 +211,7 @@ class Platform(object):
             viewProb = np.zeros((self.num_item, ))
             viewProb[popMask] += p_pos * popularity
             viewProb[lcbMask] += (1 - p_pos) * popularity
-            # iid = np.random.choice(self.num_item, p=viewProb)
-            rand = np.random.random()
-            vp = np.cumsum(viewProb)
-            iid = np.where(rand < vp)[0][0]  
+            iid = np.random.choice(self.num_item, p=viewProb)
         else:
             iid = self.itemRanking[0]
 
