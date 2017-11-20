@@ -19,7 +19,7 @@ num_user = 500000  # total number of users (time)
 lower, upper = 0, 1  # lower and upper bound of item quality
 mu, sigma = 0.5, 0.3  # mean and standard deviation of item quality
 ability_range = range(1, 6)  # ability of 1~5
-rankModes = ['quality', 'ucb']
+#rankModes = ['quality', 'ucb']
 viewModes = ['first', 'position']
 viewMode = viewModes[1]  # how platform displays items to users
 p_pos = 0.5  # ratio of positional preference in user's choice
@@ -30,7 +30,7 @@ parameters = ['tau','uc','nshow','lc']
 # fixed values
 fixed_tau, fixed_uc, fixed_nshow, fixed_lc = 1, 1, 1, 1 
 # PARAMETERS CHANGED: need to be in order
-paras = [parameters[1],parameters[3]] 
+paras = [parameters[1],parameters[2]] 
 para_ranges = []
 for i in range(2):
     if paras[i]=='tau':
@@ -38,9 +38,15 @@ for i in range(2):
         para_ranges.append(np.linspace(0,5,21))
     elif paras[i]=='uc':
 #        para_ranges.append(np.linspace(0,2,5))
-        para_ranges.append(np.linspace(0,3,13))
+        para_ranges.append(np.linspace(0,1,5))
+#        para_ranges.append(np.linspace(1.25,2,4))
+#        para_ranges.append(np.linspace(2.25,3,4))
+#        para_ranges.append(np.linspace(0,3,13))
     elif paras[i]=='nshow':
 #        para_ranges.append(np.linspace(0.1,1,4))
+#        para_ranges.append(np.linspace(0.1,0.4,7))
+#        para_ranges.append(np.linspace(0.45,7,6))
+#        para_ranges.append(np.linspace(0.75,1,6))
         para_ranges.append(np.linspace(0.1,1,19))
     elif paras[i]=='lc':
 #        para_ranges.append(np.linspace(0,2,5))
@@ -51,8 +57,8 @@ paras_grid = np.dstack(
     (mesh1,mesh2)).reshape(-1, 2)
 
 # convergence condition
-tol_cnvrg = 0.0001
-tol_close = 0.0001
+tol_cnvrg = 1e-5
+#tol_close = 0.0001
 num_consec = 1000
 
 
@@ -119,15 +125,15 @@ def simulate(its, urs, paras, para_i):
     else:
         tau, c, n_showed, user_c = fixed_tau, fixed_uc, fixed_nshow, fixed_lc
     platform1 = Platform(items=deepcopy(items), users=users)
-    platform2 = Platform(items=deepcopy(items), users=users)
+#    platform2 = Platform(items=deepcopy(items), users=users)
     happys1 = np.zeros(num_consec)
-    happys2 = np.zeros(num_consec)
+#    happys2 = np.zeros(num_consec)
     step = 0
     while step < num_user:
         happys0 = happys1
         happy1 = platform1.step(
             uid=step,
-            rankMode=rankModes[0],
+            rankMode='ucb',
             viewMode=viewMode,
             evalMethod="upvote_only",
             numFree=num_free,
@@ -136,29 +142,29 @@ def simulate(its, urs, paras, para_i):
             user_c=user_c,
             tau=tau,
             c=c)
-        happy2 = platform2.step(
-            uid=step,
-            rankMode=rankModes[1],
-            viewMode=viewMode,
-            evalMethod="upvote_only",
-            numFree=num_free,
-            n_showed=n_showed,
-            p_pos=p_pos,
-            user_c=user_c,
-            tau=tau,
-            c=c)
+#        happy2 = platform2.step(
+#            uid=step,
+#            rankMode=rankModes[1],
+#            viewMode=viewMode,
+#            evalMethod="upvote_only",
+#            numFree=num_free,
+#            n_showed=n_showed,
+#            p_pos=p_pos,
+#            user_c=user_c,
+#            tau=tau,
+#            c=c)
         happys1[step % num_consec] = happy1
-        happys2[step % num_consec] = happy2
+#        happys2[step % num_consec] = happy2
         converge = np.all(
             np.abs(happys1 - happys0[np.arange(num_consec) - 1]) < tol_cnvrg)
-        close = np.all(np.abs(happys1 - happys2) < tol_close)
-        if converge and close:
+#        close = np.all(np.abs(happys1 - happys2) < tol_close)
+        if converge:
             # quality converges and difference < tolerance
-            print(para_i[0], para_i[1], step, happy1, happy2)
-            return para_i[0], para_i[1], step, happy1, happy2
+            print(para_i[0], para_i[1], step, happy1)
+            return para_i[0], para_i[1], step, happy1
         step += 1
-    print(para_i[0], para_i[1], step, happy1, happy2)
-    return para_i[0], para_i[1], step, happy1, happy2
+    print(para_i[0], para_i[1], step, happy1)
+    return para_i[0], para_i[1], step, happy1
 
 
 #********** Start
@@ -182,7 +188,7 @@ for i in range(len(seeds)):
 
 t_ini = time.time()
 print("-----Initialization takes %.4fs" % (t_ini - t0))
-print(paras[0], paras[1], "step", rankModes[0], rankModes[1])
+print(paras[0], paras[1], "step", 'ucb')
 
 
 # Simulate
@@ -199,7 +205,10 @@ for i_run in range(num_runs):
     
 ### Output
 results = np.array(results)
-savepath = 'outputs/'+paras[0]+'&'+paras[1]
+outputpath = 'output'
+if not os.path.isdir(outputpath):
+   os.makedirs(outputpath)
+savepath = outputpath+'/'+paras[0]+'&'+paras[1]
 if not os.path.isdir(savepath):
    os.makedirs(savepath)
 for i in range(m):
