@@ -36,6 +36,7 @@ class Platform(object):
         self.itemRanking = np.zeros(self.num_item)
         self.itemPlacement = np.zeros(self.num_item)
         self.perfmeas = []
+        self.true_happiness = np.zeros(self.num_user)
 
     def rankItems(self, mode='random', c=1):
         # Rank items with given mode of ranking policies from
@@ -75,7 +76,7 @@ class Platform(object):
     def run(self,
             rankMode='random',
             viewMode='first',
-            evalMethod='upvote_only',
+            evalMethod='majority_bias',
             perf=[True, True, True],
             perfmeasK=10,
             numFree=1,
@@ -89,6 +90,7 @@ class Platform(object):
         # Initialization
         self.rankItems(mode=rankMode, c=c)
         self.placeItems(mode='all')
+        self.true_happiness = np.zeros(self.num_user)
         # Ranking in descending quality order
         desq_rank = np.argsort(-self.items[0])
         expected_top_K = desq_rank[0:perfmeasK]
@@ -125,14 +127,22 @@ class Platform(object):
                 evaluation = self.items[0, iid]
             elif evalMethod == "rel_quality":
                 evaluation = self.items[0, iid] + np.random.normal(0, 0.1)
-            else:  # "upvote_only":
+            elif evalMethod == "upvote_only":
                 evaluation = 1 if np.random.rand() < self.items[0, iid] else -1
+            else: # "majority_bias" (from CVP)
+                q = self.items[0, iid]
+                r = np.true_divide(self.items[2, iid], self.items[1, iid])
+                g = .1 * r + .1 * (1 - r)
+                p = np.exp(q + g) / (1 + np.exp(q + g))
+                evaluation = 1 if np.random.rand() < p else -1
             if evaluation:
                 # self.evalHistory[iid][uid] = evaluation
                 if evaluation > 0:
                     self.items[2, iid] += 1
                 else:
                     self.items[3, iid] += 1
+
+            self.true_happiness[uid] = self.items[0, iid] if uid == 0 else self.true_happiness[uid - 1] + self.items[0, iid]
 
             ########
             # first few runs random to get initial data
@@ -171,6 +181,7 @@ class Platform(object):
             # perfmea['items']=self.items
             self.perfmeas.append(perfmea)
 
+        self.true_happiness /= np.arange(self.num_user) + numFree * self.num_item
         return self.perfmeas
 
     def step(self,
