@@ -228,12 +228,11 @@ class Platform(object):
             viewProb[popMask] += p_pos * popularity
             viewProb[lcbMask] += (1 - p_pos) * popularity
             
-            rdmnum = np.random.rand()
+            rdmnum = np.random.rand(self.num_item)
             choose_to_view = np.where(viewProb>=rdmnum)[0]
             for ctv in choose_to_view:
                 iid = ctv
                 self.items[1, iid] += 1
-    
                 if evalMethod == "abs_quality":
                     evaluation = self.items[0, iid]
                 elif evalMethod == "rel_quality":
