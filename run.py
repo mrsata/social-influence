@@ -25,9 +25,9 @@ plotQuality = False             # plot item quality
 plotHistory = False             # plot rating history
 fig_idx = 0
 num_free = 1                    # number of free views upon initialization
-num_runs = 1                   # number of realizations
+num_runs = 10                   # number of realizations
 num_item = 50                   # total number of items
-num_user = 10000               # total number of users (time)
+num_user = 100000               # total number of users (time)
 lower, upper = 0, 1             # lower and upper bound of item quality
 mu, sigma = 0.5, 0.3            # mean and standard deviation of item quality
 ability_range = range(1, 6)     # ability of 1~5
@@ -35,12 +35,13 @@ K = 10                          # number of items for "top K in expected top K"
 rankModes = ['random', 'quality', 'upvotes', 'ucb', 'lcb']
 viewModes = ['first', 'position']
 viewMode = viewModes[1]         # how platform displays items to users
-n_showed = 1                   # number of items displayed by the platform
-p_pos = 1                       # ratio of positional preference in user's choice
+n_showed = 1                    # number of items displayed by the platform
+p_pos = .5                      # ratio of positional preference in user's choice
                                 # p_pos=1 has only positional prefernece
 user_c = 0.5                    # coeff of user's lcb
 tau = 1                         # power of positional prefernece
 coeff = 0.5                     # coeff of platform's ucb/lcb
+
 
 #********** Initilization
 def initialize(seed):
@@ -93,7 +94,7 @@ def simulate(inputs):
     perfmeas = platform.run(
         rankMode=rankMode,
         viewMode=viewMode,
-        evalMethod="upvote_only",
+        evalMethod="majority",
         perf=calcPerf,
         perfmeasK=K,
         numFree=num_free,
@@ -102,7 +103,7 @@ def simulate(inputs):
         user_c=user_c,
         tau=tau,
         c=coeff)
-    return perfmeas
+    return perfmeas, platform.true_happiness
 
 
 #********** Start
@@ -129,8 +130,9 @@ for i in range(len(rankModes)):
     result = pool.map_async(simulate, zip(items, users, repeat(rankModes[i])))
     results.append(result)
 
-#perfmeas = map(lambda x: x.get(), results)
-perfmeas = list(map(lambda x: x.get(), results))
+#perfmeas = list(map(lambda x: x.get(), results))
+results = list(map(lambda x: x.get(), results))
+perfmeas, true_happiness = zip(* [tuple(zip(*r)) for r in results])
 
 t_done = time.time()
 print("-----Simulation takes {:.4f}s".format(t_done - t_ini))
@@ -140,19 +142,22 @@ print("-----Simulation takes {:.4f}s".format(t_done - t_ini))
 #    ]
 
 #**********  Performance Measurements
+true_happiness = np.mean(np.array(true_happiness), axis=1)
+
 if calcPerf[0]:
     happy = [
         list(map(lambda x: [pf['happy'] for pf in x], p)) for p in perfmeas
     ]
     happy = np.mean(np.array(happy), axis=1)
     for i in range(len(rankModes)):
-        print("Mode: {:10} happiness: {}".format(rankModes[i], happy[i][-1]))
+        print("Mode: {:8} happiness: {:.6f}  true: {:.6f}".format(
+            rankModes[i], happy[i][-1], true_happiness[i][-1]))
 
 if calcPerf[1]:
     ktd = [list(map(lambda x: [pf['ktd'] for pf in x], p)) for p in perfmeas]
     ktd = np.mean(np.array(ktd), axis=1)
     for i in range(len(rankModes)):
-        print("Mode: {:10} distance: {}".format(rankModes[i], ktd[i][-1]))
+        print("Mode: {:10} distance: {:}".format(rankModes[i], ktd[i][-1]))
 
 if calcPerf[2]:
     topK = [list(map(lambda x: [pf['topK'] for pf in x], p)) for p in perfmeas]
@@ -162,26 +167,26 @@ if calcPerf[2]:
             "Mode: {:10} top K percent: {}".format(rankModes[i], topK[i][-1]))
 
 # time to converge
-std_perf = happy[1, :]  #quality
-diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
-num_consec = 50
-diff = diff < 1e-5
-conv = np.array([sum(diff[i:i + num_consec])
-                 for i, di in enumerate(diff)]) == num_consec
-conv_idx = np.where(conv)[0][0]
-conv_val = std_perf[conv_idx]
+# std_perf = happy[1, :]  #quality
+# diff = np.abs([t - s for s, t in zip(std_perf, std_perf[1:])])
+# num_consec = 50
+# diff = diff < 1e-5
+# conv = np.array([sum(diff[i:i + num_consec])
+#                  for i, di in enumerate(diff)]) == num_consec
+# conv_idx = np.where(conv)[0][0]
+# conv_val = std_perf[conv_idx]
 
-tol = 0.005
-print("Convergenence")
-for i_rm, rm in enumerate(rankModes[2:]):
-    diff_conv = np.abs(happy[i_rm + 2, :] - conv_val) < tol
-    cont_conv = np.array(
-        [sum(diff_conv[i:i + 10]) for i, di in enumerate(diff_conv)]) == 10
-    if sum(cont_conv) > 0:
-        conv_time = np.where(cont_conv)[0][0]
-    else:
-        conv_time = float("inf")
-    print(rm, 'converge time: ', conv_time)
+# tol = 0.005
+# print("Convergenence")
+# for i_rm, rm in enumerate(rankModes[2:]):
+#     diff_conv = np.abs(happy[i_rm + 2, :] - conv_val) < tol
+#     cont_conv = np.array(
+#         [sum(diff_conv[i:i + 10]) for i, di in enumerate(diff_conv)]) == 10
+#     if sum(cont_conv) > 0:
+#         conv_time = np.where(cont_conv)[0][0]
+#     else:
+#         conv_time = float("inf")
+#     print(rm, 'converge time: ', conv_time)
 
 #********** Plotting
 if calcPerf[0]:  # user happiness
@@ -189,11 +194,14 @@ if calcPerf[0]:  # user happiness
     plt.figure(fig_idx)
     for i in range(len(rankModes)):
         plt.plot(happy[i], label='rank by %s' % (rankModes[i]))
-    plt.title('user happiness VS. time (c={})'.format(coeff))
+        plt.plot(true_happiness[i], label='true_hp %s' % (rankModes[i]))
+    plt.title(
+        'user happiness VS. time (tau={}, uc={}, lc={}, nshow={}/{}, p_pos={})'.
+        format(tau, coeff, user_c, int(n_showed * num_item), num_item, p_pos))
     plt.minorticks_on()
     plt.xlabel('time')
     plt.ylabel('user happiness')
-    y_ub = np.ceil(np.max(happy) * 10) / 10
+    y_ub = np.ceil(np.max(true_happiness) * 10) / 10
     y_lb = np.floor(np.min(happy) * 10) / 10
     plt.ylim([y_lb, y_ub])
     plt.legend(loc=4)

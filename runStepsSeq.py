@@ -181,7 +181,7 @@ if not os.path.isdir(savepath):
 for i in range(m):
     p1, p2 = paras_grid[i]
     with open(
-        (savepath + '/' + paras[0] + '{0}_' + paras[1] + '{1}.txt').format(
+        (savepath + '/' + paras[0] + '{:.2f}_' + paras[1] + '{:.2f}.txt').format(
             p1, p2), 'w') as f:
         f.write(paras[0] + " " + str(p1) + "  " + paras[1] + " " + str(p2) +
                 "  number of realizations " + str(num_runs) + "\n")
