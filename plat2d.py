@@ -93,7 +93,7 @@ class Platform(object):
         desq_rank = np.argsort(-self.items[0])
         expected_top_K = desq_rank[0:perfmeasK]
         # Run Start
-        if viewMode == 'position':
+        if viewMode == 'position' or viewMode=='multi':
             # positional preference (from CVP)
             if n_showed > 1 or n_showed < 0:
                 portion_showed = 1
@@ -175,6 +175,7 @@ class Platform(object):
 
     def step(self,
              uid,
+             prevHappy,
              rankMode='random',
              viewMode='first',
              evalMethod='upvote_only',
@@ -189,9 +190,10 @@ class Platform(object):
         # Initialization
         self.rankItems(mode=rankMode, c=c)
         self.placeItems(mode='all')
+        happy = prevHappy*uid
 
         # Run Start
-        if viewMode == 'position':
+        if viewMode == 'position' or viewMode=='multi':
             # positional preference (from CVP)
             if n_showed > 1 or n_showed < 0:
                 portion_showed = 1
@@ -201,8 +203,11 @@ class Platform(object):
             display_rank = np.arange(num_showed)
             popularity = (1 / (1 + display_rank))**tau
             popularity = popularity / np.sum(popularity)
-
-        if viewMode == 'position':
+            if viewMode=='multi':
+                popularity = num_showed * (popularity / np.sum(popularity))
+            
+        if viewMode == 'multi':
+            quality_track = 0
             popMask = self.itemRanking[:num_showed]
             lower = confidenceBound(self.items[:, popMask], self.num_user,
                                     user_c)[0]
@@ -211,32 +216,65 @@ class Platform(object):
             viewProb = np.zeros((self.num_item, ))
             viewProb[popMask] += p_pos * popularity
             viewProb[lcbMask] += (1 - p_pos) * popularity
-            iid = np.random.choice(self.num_item, p=viewProb)
+            
+            rdmnum = np.random.rand()
+            choose_to_view = np.where(viewProb>=rdmnum)[0]
+            for ctv in choose_to_view:
+                iid = ctv
+                self.items[1, iid] += 1
+    
+                if evalMethod == "abs_quality":
+                    evaluation = self.items[0, iid]
+                elif evalMethod == "rel_quality":
+                    evaluation = self.items[0, iid] + np.random.normal(0, 0.1)
+                else:  # "upvote_only":
+                    evaluation = 1 if np.random.rand() < self.items[0, iid] else -1
+                if evaluation:
+                    # self.evalHistory[iid][uid] = evaluation
+                    if evaluation > 0:
+                        self.items[2, iid] += 1
+                        if self.items[0, iid]>quality_track:
+                            quality_track = self.items[0, iid]
+                    else:
+                        self.items[3, iid] += 1
+            happy = happy + quality_track
         else:
-            iid = self.itemRanking[0]
-
-        # self.viewHistory[iid][uid] += 1
-        self.items[1, iid] += 1
-
-        if evalMethod == "abs_quality":
-            evaluation = self.items[0, iid]
-        elif evalMethod == "rel_quality":
-            evaluation = self.items[0, iid] + np.random.normal(0, 0.1)
-        else:  # "upvote_only":
-            evaluation = 1 if np.random.rand() < self.items[0, iid] else -1
-        if evaluation:
-            # self.evalHistory[iid][uid] = evaluation
-            if evaluation > 0:
-                self.items[2, iid] += 1
+            if viewMode == 'position':
+                popMask = self.itemRanking[:num_showed]
+                lower = confidenceBound(self.items[:, popMask], self.num_user,
+                                        user_c)[0]
+                lcbRank = np.argsort(-lower)
+                lcbMask = popMask[np.argsort(lcbRank)]
+                viewProb = np.zeros((self.num_item, ))
+                viewProb[popMask] += p_pos * popularity
+                viewProb[lcbMask] += (1 - p_pos) * popularity
+                iid = np.random.choice(self.num_item, p=viewProb)
             else:
-                self.items[3, iid] += 1
+                iid = self.itemRanking[0]
+    
+            # self.viewHistory[iid][uid] += 1
+            self.items[1, iid] += 1
+    
+            if evalMethod == "abs_quality":
+                evaluation = self.items[0, iid]
+            elif evalMethod == "rel_quality":
+                evaluation = self.items[0, iid] + np.random.normal(0, 0.1)
+            else:  # "upvote_only":
+                evaluation = 1 if np.random.rand() < self.items[0, iid] else -1
+            if evaluation:
+                # self.evalHistory[iid][uid] = evaluation
+                if evaluation > 0:
+                    self.items[2, iid] += 1
+                    happy = happy + self.items[0, iid]
+                else:
+                    self.items[3, iid] += 1
 
         # Happiness
         time = uid + 1
         sum_upvotes = np.sum(self.items[2])
         upvotes_t = sum_upvotes / (time + numFree * self.num_item)
-
-        return upvotes_t
+        happy = happy/time
+        return upvotes_t, happy
 
 
 def confidenceBound(items, T, c=1):

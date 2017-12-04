@@ -4,24 +4,50 @@ import re
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-filepath = "../output1120/"
-para_pair = ['uc&nshow', 'nshow&lc', 'uc&lc']
-para_pair_id = 2
+filepath = "../output1129/"
+para_pair = ['tau&uc','tau&nshow','tau&lc','uc&nshow', 'nshow&lc', 'uc&lc']
+para_pair_id = 1
 all_files = os.listdir(filepath+para_pair[para_pair_id]+'/')
 
 if para_pair_id==0:
+    p1 = 'tau'
+    p2 = 'uc'
+    fixed = 'nshow=1,lc=1'
+    p1s = np.linspace(0,5,21)
+    p2s = np.linspace(0,3,13)
+    
+elif para_pair_id==1:
+    p1 = 'tau'
+    p2 = 'nshow'
+    fixed = 'uc=1,lc=1'
+#    p1s = np.linspace(0,5,21)
+#    p2s = [float("{0:.2f}".format(x)) for x in np.linspace(0.1,1,19)]
+    p1s = [float("{0:.3f}".format(x)) for x in np.linspace(1,2,21)]
+    p2s = [float("{0:.3f}".format(x)) for x in np.linspace(0.02,0.12,21)]
+#    p2s = [float("{0:.4f}".format(x)) for x in np.linspace(0.02,0.12,21)]
+    
+elif para_pair_id==2:
+    p1 = 'tau'
+    p2 = 'lc'
+    fixed = 'uc=1,nshow=1'
+    p1s = np.linspace(0,5,21)
+    p2s = np.linspace(0,3,13)
+
+elif para_pair_id==3:
     p1 = 'uc'
     p2 = 'nshow'
     fixed = 'tau=1,lc=1'
     p1s = np.linspace(0,3,13)
     p2s = [float("{0:.2f}".format(x)) for x in np.linspace(0.1,1,19)]
-elif para_pair_id==1:
+
+elif para_pair_id==4:
     p1 = 'nshow'
     p2 = 'lc'
     fixed = 'tau=1,uc=1'
     p1s = [float("{0:.2f}".format(x)) for x in np.linspace(0.1,1,19)]
     p2s = np.linspace(0,3,13)
-elif para_pair_id==2:
+
+elif para_pair_id==5:
     p1 = 'uc'
     p2 = 'lc'
     fixed = 'tau=1,nshow=1'
@@ -37,14 +63,16 @@ median_happy = np.zeros((len(p1idx),len(p2idx)))
 ## READ FILES
 for fi in all_files:
     print (fi)
+    
     para1, para2 = re.findall(r'\d+\.?\d*',fi)
     para1, para2 = float(para1), float(para2)
-    with open(filepath+para_pair[para_pair_id]+'/'+fi, 'r') as f:
-        lines = f.readlines()
-        mn = lines[12][:-1].split()[-1][:-1]
-        md = lines[13][:-1].split()[-1][:-1]
-        mean_happy[p1idx[para1],p2idx[para2]] = mn
-        median_happy[p1idx[para1],p2idx[para2]] = md
+    if para1 in p1s and para2 in p2s:
+        with open(filepath+para_pair[para_pair_id]+'/'+fi, 'r') as f:
+            lines = f.readlines()
+            mn = lines[12][:-1].split()[-1][:-1]
+            md = lines[13][:-1].split()[-1][:-1]
+            mean_happy[p1idx[para1],p2idx[para2]] = mn
+            median_happy[p1idx[para1],p2idx[para2]] = md
         
 ## PLOT
 # mean
@@ -52,10 +80,10 @@ fig,ax = plt.subplots()
 plt.imshow(mean_happy, cmap='magma', interpolation=None,aspect='auto')
 ax.set_xticks(np.arange(0, len(p2s), 1))
 ax.set_xticklabels(p2s,rotation=45, ha='center')
-plt.xlabel(p2)
+plt.xlabel(p2,fontsize=13)
 ax.set_yticks(np.arange(0, len(p1s), 1))
 ax.set_yticklabels(p1s,ha='right')
-plt.ylabel(p1)
+plt.ylabel(p1,fontsize=13)
 plt.title('Mean Happiness ('+fixed+')')
 plt.show()
 plt.colorbar()

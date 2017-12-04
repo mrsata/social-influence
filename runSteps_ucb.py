@@ -30,19 +30,26 @@ parameters = ['tau','uc','nshow','lc']
 # fixed values
 fixed_tau, fixed_uc, fixed_nshow, fixed_lc = 1, 1, 1, 1 
 # PARAMETERS CHANGED: need to be in order
-paras = [parameters[0],parameters[1]] 
+paras = [parameters[0],parameters[2]] 
 para_ranges = []
 for i in range(2):
     if paras[i]=='tau':
 #        para_ranges.append(np.linspace(0,2,3))
         
-        para_ranges.append(np.linspace(0,1,5))
+#        para_ranges.append(np.linspace(0,1,5))
 #        para_ranges.append(np.linspace(1.25,2,4))
 #        para_ranges.append(np.linspace(2.25,3,4))
 #        para_ranges.append(np.linspace(3.25,4,4))
 #        para_ranges.append(np.linspace(4.25,5,4))
         
 #        para_ranges.append(np.linspace(0,5,21))
+        
+        para_ranges.append(np.linspace(1,2,21))
+        
+#        para_ranges.append(np.linspace(1,1.25,6))
+#        para_ranges.append(np.linspace(1.3,1.5,5))
+#        para_ranges.append(np.linspace(1.55,1.75,5))
+#        para_ranges.append(np.linspace(1.8,2,5))
     elif paras[i]=='uc':
 #        para_ranges.append(np.linspace(0,2,5))
         
@@ -59,6 +66,7 @@ for i in range(2):
 #        para_ranges.append(np.linspace(0.75,1,6))
         
         para_ranges.append(np.linspace(0.1,1,19))
+#        para_ranges.append(np.linspace(0.02,0.12,21))
     elif paras[i]=='lc':
 #        para_ranges.append(np.linspace(0,2,5))
         para_ranges.append(np.linspace(0,3,13))
